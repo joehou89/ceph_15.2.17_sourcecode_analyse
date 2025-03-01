@@ -12,6 +12,21 @@
  *
  */
 
+
+/*
+模块作用：
+从软件架构看，osdc业务子模块的作用是嵌入式到c/s架构的客户端，由客户端调用osdc提供的接口将数据发送给服务端
+起到一个“数据通道”的作用
+ceph社区osdc的功能做的比较厚，包含如下几个功能：
+(1) 数据io通道
+(2) objecter cache缓存
+(3) 提供获取集群管控面资源的接口
+*/
+
+
+
+
+
 #ifndef CEPH_OBJECTER_H
 #define CEPH_OBJECTER_H
 
