@@ -13796,12 +13796,16 @@ void BlueStore::_do_write_small(
  	      uint64_t b_off = offset - head_pad - bstart;
 	      uint64_t b_len = length + head_pad + tail_pad;
 
+        /*
+        如下针对小io的几种场景做区分
+        */
         //场景1.完全对齐处理场景，并且落在了blob未使用空间
 	      // direct write into unused blocks of an existing mutable blob?
+        //判断条件:blocks物理块磁盘未使用 或者 blob可以使用
 	      if ((b_off % chunk_size == 0 && b_len % chunk_size == 0) &&  //off对齐，数据长度len对齐
-	        b->get_blob().get_ondisk_length() >= b_off + b_len &&    //blob上的磁盘空间满足要写入的空间大小
-	        b->get_blob().is_unused(b_off, b_len) &&   //blob空间未使用
-	        b->get_blob().is_allocated(b_off, b_len))  //blob空间已申请 
+	        b->get_blob().get_ondisk_length() >= b_off + b_len &&      //blob上的磁盘空间满足要写入的空间大小
+	        b->get_blob().is_unused(b_off, b_len) &&                   //blob空间未使用
+	        b->get_blob().is_allocated(b_off, b_len))                  //blob空间已申请 
         {
 	        _apply_padding(head_pad, tail_pad, bl); //是否需要补零处理
 
@@ -13811,11 +13815,16 @@ void BlueStore::_do_write_small(
 		      << std::dec << " of mutable " << *b << dendl;
 	        _buffer_cache_write(txc, b, b_off, bl, wctx->buffered ? 0 : Buffer::FLAG_NOCACHE);
 
-	        if (!g_conf()->bluestore_debug_omit_block_device_write) {  //b_len可能只有8KB
-            //要写数据长度<强制延迟写大小，则延迟写入，为什么要延迟写入?
+          /*
+          bluestore_debug_omit_block_device_write只是一种debug模式，正常io流程必走，所以是false
+          */
+	        if (!g_conf()->bluestore_debug_omit_block_device_write) {  //b_len可能只有8KB  bluestore_debug_omit_block_device_write默认是false
+            /*要写数据长度<强制延迟写大小，则延迟写入，为什么要延迟写入?
+            凑成一整块数据写入的性能会更高，整个bluestore的写入顺序是先写数据到osd，再写元数据到rocksdb，所以这里即使不落盘，不存在数据丢失的情况
+            */
 	          if (b_len <= prefer_deferred_size)  //prefer_deferred_size默认配置是32KB
             {
-              //走这个分支，没有看到有落盘的接口? --> 在allocted接口中提交libaio
+              //走这个分支，没有看到有落盘的接口? --> 后面会写db，所以这里数据即使丢失没关系
 	            dout(20) << __func__ << " deferring small 0x" << std::hex << b_len << std::dec << " unused write via deferred" << dendl;
 	            bluestore_deferred_op_t *op = _get_deferred_op(txc);
 	            op->op = bluestore_deferred_op_t::OP_WRITE;
@@ -13825,7 +13834,7 @@ void BlueStore::_do_write_small(
 		            return 0;
 		          });
 	            op->data = bl;
-	          } else {  //否则直接调用libaio接口写入
+	          } else {  //如果>32KB, 直接调用libaio接口落盘
 	            b->get_blob().map_bl(
 		          b_off, bl,
 		          [&](uint64_t offset, bufferlist& t) {
@@ -13833,14 +13842,16 @@ void BlueStore::_do_write_small(
               );
 	          }
 	        }
-          b->dirty_blob().calc_csum(b_off, bl);
+          
+          b->dirty_blob().calc_csum(b_off, bl);//更新blob的checksum
           dout(20) << __func__ << "  lex old " << *ep << dendl;
+          //更新逻辑extent
           Extent *le = o->extent_map.set_lextent(c, offset, b_off + head_pad, length, b, &wctx->old_extents);
-          b->dirty_blob().mark_used(le->blob_offset, le->length);
+          b->dirty_blob().mark_used(le->blob_offset, le->length);// 更新blob的使用情况，已使用
           txc->statfs_delta.stored() += le->length;
           dout(20) << __func__ << "  lex " << *le << dendl;
           logger->inc(l_bluestore_write_small_unused);
-          return;
+          return; //写入操作完成返回
 	      }
 
         //场景2.没有对齐，需要先补齐读，再写入
