@@ -14525,6 +14525,19 @@ void BlueStore::_wctx_finish(
   }
 }
 
+/*
+函数作用：
+该接口是用于写数据，分为大写和小写
+bluestore对磁盘的分配是按照min_alloc_size进行区分的
+配置文件有如下几个参数:
+bluestore_min_alloc_size: 0
+bluestore_min_alloc_size_hdd: 65536
+bluestore_min_alloc_size_ssd: 4096
+
+场景：
+场景1：如果是按照bluestore_min_alloc_size_hdd对齐的就是大写， 走big_write
+场景2：如果对象写入的大小< bluestore_min_alloc_size_hdd, 就是小写，走small_write
+*/
 void BlueStore::_do_write_data(
   TransContext *txc,
   CollectionRef& c,
