@@ -345,6 +345,30 @@ int RGWGetObj_ObjStore_S3::send_response_data(bufferlist& bl, off_t bl_ofs,
 
     for (auto iter = attrs.begin(); iter != attrs.end(); ++iter) {
       const char *name = iter->first.c_str();
+      /*
+      TODO:
+      这段代码是现网对象存储系统存量产品的一个需求
+      之前对象用的是swift对象存储(当时是自己做了一个网关)，后端接ceph；后来用到了ceph rgw对象网关
+      后面逐渐想牵引客户把swift对象数据迁移到ceph上来，所以需要做一个协议转换，即元数据的适配
+      */
+      if (iter->first.find("user.rgw.x-amz-meta-") != string::npos)
+      {
+        std::string swift_custom_prefix = "X-Object-Meta-";
+        std::string swift_ttl_prefix = "X-Delete-At";
+        std::string s3_custom_prefix = "user.rgw.x-amz-meta-";
+        std::string swift_custom_str;
+        if (iter->first.find("user.rgw.x-amz-meta-csspttl") != string::npos)
+        {
+          swift_custom_str = swift_ttl_prefix;
+        } 
+        else
+        {
+          swift_custom_str = swift_custom_prefix + iter->first.substr(iter->first.size() - (iter->first.size() - s3_custom_prefix.size()));
+        }
+        ldout(this, 0) << "Update attr: " << swift_custom_str << dendl;
+        dump_header(s, swift_custom_str, iter->second);
+      }
+
       map<string, string>::iterator aiter = rgw_to_http_attrs.find(name);
       if (aiter != rgw_to_http_attrs.end()) {
         if (response_attrs.count(aiter->second) == 0) {
