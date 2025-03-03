@@ -12,6 +12,15 @@
  *
  */
 
+/*
+bluestore_types.h头文件作用
+bluestore的结构体在磁盘上对应有一个，在内存中对应有一个，因为毕竟是对磁盘直接进行管理，
+该文件描述的是磁盘上的数据结构，和BlueStore.h上描述的是一一对应的
+
+
+*/
+
+
 #ifndef CEPH_OSD_BLUESTORE_BLUESTORE_TYPES_H
 #define CEPH_OSD_BLUESTORE_BLUESTORE_TYPES_H
 
@@ -48,6 +57,9 @@ WRITE_CLASS_ENCODER(bluestore_bdev_label_t)
 
 ostream& operator<<(ostream& out, const bluestore_bdev_label_t& l);
 
+/*
+作用: PG在磁盘的数据结构
+*/
 /// collection metadata
 struct bluestore_cnode_t {
   uint32_t bits;   ///< how many bits of coll pgid are significant
@@ -91,6 +103,7 @@ struct bluestore_interval_t
 };
 
 /// pextent: physical extent
+/*描述的是一段连续的物理磁盘空间*/
 struct bluestore_pextent_t : public bluestore_interval_t<uint64_t, uint32_t> 
 {
   bluestore_pextent_t() {}
@@ -110,6 +123,7 @@ WRITE_CLASS_DENC(bluestore_pextent_t)
 
 ostream& operator<<(ostream& out, const bluestore_pextent_t& o);
 
+/*宏定义，是一个数组，每个成员类型是bluestore_pextent_t*/
 typedef mempool::bluestore_cache_other::vector<bluestore_pextent_t> PExtentVector;
 
 template<>
@@ -428,8 +442,13 @@ WRITE_CLASS_DENC(bluestore_blob_use_tracker_t)
 ostream& operator<<(ostream& out, const bluestore_blob_use_tracker_t& rm);
 
 /// blob: a piece of data on disk
+/*
+作用:描述对象在磁盘上的数据结构，是一片不一定连续的物理磁盘空间
+      包含多段pextent
+*/
 struct bluestore_blob_t {
 private:
+  /*该成员描述的是多段物理地址连续的物理磁盘空间*/
   PExtentVector extents;              ///< raw data position on device
   uint32_t logical_length = 0;        ///< original length of data stored in the blob
   uint32_t compressed_length = 0;     ///< compressed length if any
@@ -896,6 +915,9 @@ WRITE_CLASS_DENC(bluestore_shared_blob_t)
 
 ostream& operator<<(ostream& out, const bluestore_shared_blob_t& o);
 
+/*
+作用: 用于描述bluestore对象在磁盘中的结构体
+*/
 /// onode: per-object metadata
 struct bluestore_onode_t {
   uint64_t nid = 0;                    ///< numeric id (locally unique)

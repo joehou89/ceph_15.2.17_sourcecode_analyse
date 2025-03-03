@@ -12,6 +12,22 @@
  *
  */
 
+/*
+bluestore层解析
+bluestore层是直接对裸盘进行管理，所以涉及的内存有：
+(1)磁盘管理
+(2)内存分配
+(3)数据io
+
+BlueStore.h头文件描述的内存的数据结构体,所有的结构体都是直接以名称内容开头
+
+
+参考链接：https://www.modb.pro/db/134269
+
+*/
+
+
+
 #ifndef CEPH_OSD_BLUESTORE_H
 #define CEPH_OSD_BLUESTORE_H
 
@@ -517,6 +533,9 @@ public:
 //#define CACHE_BLOB_BL  // not sure if this is a win yet or not... :/
 
   /// in-memory blob metadata and associated cached buffers (if any)
+  /*
+  用于描述bluestore对象在内存中的结构体
+  */
   struct Blob {
     MEMPOOL_CLASS_HELPERS();
 
@@ -686,17 +705,23 @@ public:
       bool include_ref_map);
 #endif
   };
+  /*用于描述一个对象的物理内存相关的结构体*/
   typedef boost::intrusive_ptr<Blob> BlobRef;
   typedef mempool::bluestore_cache_meta::map<int,BlobRef> blob_map_t;
 
   /// a logical extent, pointing to (some portion of) a blob
   typedef boost::intrusive::set_base_hook<boost::intrusive::optimize_size<true> > ExtentBase; //making an alias to avoid build warnings
+  
+  /*
+  作用:描述对象的一段逻辑内存空间
+  */
   struct Extent : public ExtentBase {
     MEMPOOL_CLASS_HELPERS();
 
     uint32_t logical_offset = 0;      ///< logical offset
     uint32_t blob_offset = 0;         ///< blob offset
     uint32_t length = 0;              ///< length
+    /*用于描述一段物理内存空间*/
     BlobRef  blob;                    ///< the blob with our data
 
     /// ctor for lookup only
@@ -754,6 +779,10 @@ public:
     }
   };
   typedef boost::intrusive::set<Extent> extent_map_t;
+  /*
+  extent_map_t描述的是对象所包含的多段逻辑内存空间
+  在这里是一个类型的宏定义，其实就是以Extent为数据类型的set集合
+  */
 
 
   friend ostream& operator<<(ostream& out, const Extent& e);
@@ -1054,6 +1083,11 @@ public:
 
   struct OnodeSpace;
   /// an in-memory object
+
+  /*
+  作用:对象在内存的数据结构
+  BlueStore对象的描述
+  */
   struct Onode {
     MEMPOOL_CLASS_HELPERS();
 
@@ -1074,6 +1108,8 @@ public:
                               /// of it at the moment though)
     std::atomic_bool pinned;  ///< Onode is pinned
                               /// (or should be pinned when cached)
+    
+    /*描述逻辑内存空间的层次结构，用于保存写入的数据*/
     ExtentMap extent_map;
 
     // track txc's that have not been committed to kv store (and whose
@@ -1320,6 +1356,9 @@ public:
   class OpSequencer;
   using OpSequencerRef = ceph::ref_t<OpSequencer>;
 
+  /*
+  struct Collection解析：PG在内存中的数据结构体
+  */
   struct Collection : public CollectionImpl {
     BlueStore *store;
     OpSequencerRef osr;
