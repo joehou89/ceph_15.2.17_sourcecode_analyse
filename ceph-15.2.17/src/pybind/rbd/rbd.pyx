@@ -386,6 +386,9 @@ cdef extern from "rbd/librbd.h" nogil:
     int rbd_mirror_mode_get(rados_ioctx_t io, rbd_mirror_mode_t *mirror_mode)
     int rbd_mirror_mode_set(rados_ioctx_t io, rbd_mirror_mode_t mirror_mode)
 
+    #新增API
+    #获取镜像卷uuid
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_uuid_get(rados_ioctx_t io_ctx, char *mirror_uuid,
                             size_t *max_len)
 
@@ -395,31 +398,59 @@ cdef extern from "rbd/librbd.h" nogil:
         rados_ioctx_t io_ctx, rbd_mirror_peer_direction_t direction,
         const char *token)
 
+    #修改API接口
+    #远程镜像对端增加站点镜像
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_add(
         rados_ioctx_t io, char *uuid, size_t uuid_max_length,
         rbd_mirror_peer_direction_t direction, const char *site_name,
         const char *client_name)
+
+    #修改API接口
+    #远程镜像对端删除站点镜像
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_remove(rados_ioctx_t io, const char *uuid)
+
+    #修改API接口
+    #远程镜像对端列举站点镜像
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_list(
         rados_ioctx_t io_ctx, rbd_mirror_peer_site_t *peers,int *max_peers)
+
+    #修改API接口
+    #远程镜像对端清空站点镜像
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     void rbd_mirror_peer_site_list_cleanup(
         rbd_mirror_peer_site_t *peers, int max_peers)
 
+    #修改API接口
+    #远程镜像对端设置站点镜像名称
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_set_name(
         rados_ioctx_t io_ctx, const char *uuid, const char *site_name)
     int rbd_mirror_peer_site_set_client_name(
         rados_ioctx_t io_ctx, const char *uuid, const char *client_name)
 
+    #修改API接口
+    #远程镜像对端获取站点镜像属性
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_get_attributes(
         rados_ioctx_t io_ctx, const char *uuid, char *keys, size_t *max_key_len,
         char *values, size_t *max_val_length, size_t *key_value_count)
+     #修改API接口
+    #远程镜像对端设置站点镜像属性
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_peer_site_set_attributes(
         rados_ioctx_t io_ctx, const char *uuid, const char *keys,
         const char *values, size_t count)
 
+ #修改API接口
+    #远程镜像对端全局列举站点镜像状态列表
     int rbd_mirror_image_global_status_list(
         rados_ioctx_t io, const char *start_id, size_t max, char **image_ids,
         rbd_mirror_image_global_status_t *images, size_t *len)
+    #修改API接口
+    #远程镜像对端全局清空站点镜像状态列表
     void rbd_mirror_image_global_status_list_cleanup(
         char **image_ids, rbd_mirror_image_global_status_t *images, size_t len)
     int rbd_mirror_image_status_summary(rados_ioctx_t io,
@@ -433,6 +464,10 @@ cdef extern from "rbd/librbd.h" nogil:
     void rbd_mirror_image_instance_id_list_cleanup(char **image_ids,
                                                    char **instance_ids,
                                                    size_t len)
+
+     #新增API接口
+    #镜像信息列表
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_mirror_image_info_list(rados_ioctx_t io_ctx,
                                    rbd_mirror_image_mode_t *mode_filter,
                                    const char *start_id, size_t max,
@@ -440,6 +475,9 @@ cdef extern from "rbd/librbd.h" nogil:
                                    rbd_mirror_image_mode_t *mode_entries,
                                    rbd_mirror_image_info_t *info_entries,
                                    size_t *num_entries)
+     #新增API接口
+    #清空镜像信息列表
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     void rbd_mirror_image_info_list_cleanup(char **image_ids,
                                             rbd_mirror_image_info_t *info_entries,
                                             size_t num_entries)
@@ -466,6 +504,10 @@ cdef extern from "rbd/librbd.h" nogil:
                            rbd_image_t *image, const char *snap_name)
     int rbd_open_by_id_read_only(rados_ioctx_t io, const char *image_id,
                                  rbd_image_t *image, const char *snap_name)
+
+    #新增API接口
+    #异步open 卷接口(异步打开、通过id异步打开、只读方式打开)
+    #https://pkg.go.dev/github.com/ceph/go-ceph/rbd
     int rbd_aio_open(rados_ioctx_t io, const char *name, rbd_image_t *image,
                      const char *snap_name, rbd_completion_t c)
     int rbd_aio_open_by_id(rados_ioctx_t io, const char *id, rbd_image_t *image,
@@ -476,8 +518,11 @@ cdef extern from "rbd/librbd.h" nogil:
     int rbd_aio_open_by_id_read_only(rados_ioctx_t io, const char *id,
                                      rbd_image_t *image, const char *snap_name,
                                      rbd_completion_t c)
+     #新增API接口
+    #卷特性转字符串、字符串转卷特性
     int rbd_features_to_string(uint64_t features, char *str_features, size_t *size)
     int rbd_features_from_string(const char *str_features, uint64_t *features)
+
     int rbd_close(rbd_image_t image)
     int rbd_aio_close(rbd_image_t image, rbd_completion_t c)
     int rbd_resize2(rbd_image_t image, uint64_t size, bint allow_shrink,
@@ -533,14 +578,21 @@ cdef extern from "rbd/librbd.h" nogil:
     int rbd_snap_unprotect(rbd_image_t image, const char *snap_name)
     int rbd_snap_is_protected(rbd_image_t image, const char *snap_name,
                               int *is_protected)
+
+     #新增API接口
+    #判断快照是否存在
     int rbd_snap_exists(rbd_image_t image, const char *snapname, bint *exists)
     int rbd_snap_get_limit(rbd_image_t image, uint64_t *limit)
     int rbd_snap_set_limit(rbd_image_t image, uint64_t limit)
     int rbd_snap_get_timestamp(rbd_image_t image, uint64_t snap_id, timespec *timestamp)
     int rbd_snap_set(rbd_image_t image, const char *snapname)
     int rbd_snap_set_by_id(rbd_image_t image, uint64_t snap_id)
+      #新增API接口
+    #获取快照名称
     int rbd_snap_get_name(rbd_image_t image, uint64_t snap_id,
                           char *snapname, size_t *name_len)
+      #新增API接口
+    #判断快照id
     int rbd_snap_get_id(rbd_image_t image, const char *snapname,
                                 uint64_t *snap_id)
     int rbd_snap_get_namespace_type(rbd_image_t image,
@@ -553,10 +605,14 @@ cdef extern from "rbd/librbd.h" nogil:
                                           size_t snap_group_namespace_size)
     int rbd_snap_get_trash_namespace(rbd_image_t image, uint64_t snap_id,
                                      char *original_name, size_t max_length)
+    #新增API接口
+    #获取快照卷命名空间
     int rbd_snap_get_mirror_namespace(
         rbd_image_t image, uint64_t snap_id,
         rbd_snap_mirror_namespace_t *mirror_ns,
         size_t snap_mirror_namespace_size)
+     #新增API接口
+    #清空快照卷命名空间
     void rbd_snap_mirror_namespace_cleanup(
         rbd_snap_mirror_namespace_t *mirror_ns,
         size_t snap_mirror_namespace_size)
@@ -607,33 +663,50 @@ cdef extern from "rbd/librbd.h" nogil:
     int rbd_flush(rbd_image_t image)
     int rbd_invalidate_cache(rbd_image_t image)
 
+  #修改API接口
+    #启用镜像卷
     int rbd_mirror_image_enable2(rbd_image_t image,
                                  rbd_mirror_image_mode_t mode)
     int rbd_mirror_image_disable(rbd_image_t image, bint force)
     int rbd_mirror_image_promote(rbd_image_t image, bint force)
     int rbd_mirror_image_demote(rbd_image_t image)
     int rbd_mirror_image_resync(rbd_image_t image)
+     #新增API接口
+    #创建快照卷
     int rbd_mirror_image_create_snapshot(rbd_image_t image, uint64_t *snap_id)
+      #新增API接口
+    #异步创建快照卷
     int rbd_aio_mirror_image_create_snapshot(rbd_image_t image, uint32_t flags,
                                              uint64_t *snap_id,
                                              rbd_completion_t c)
+
     int rbd_mirror_image_get_info(rbd_image_t image,
                                   rbd_mirror_image_info_t *mirror_image_info,
                                   size_t info_size)
+       #新增API接口
+    #清空镜像卷信息
     void rbd_mirror_image_get_info_cleanup(
         rbd_mirror_image_info_t *mirror_image_info)
+     #新增API接口
+    #异步获取镜像卷信息
     int rbd_aio_mirror_image_get_info(
         rbd_image_t image, rbd_mirror_image_info_t *mirror_image_info,
         size_t info_size, rbd_completion_t c)
+      #新增API接口
+    #获取镜像卷mode
     int rbd_mirror_image_get_mode(rbd_image_t image,
                                   rbd_mirror_image_mode_t *mode)
     int rbd_aio_mirror_image_get_mode(rbd_image_t image,
                                       rbd_mirror_image_mode_t *mode,
                                       rbd_completion_t c)
+     #新增API接口
+    #获取镜像卷全局状态
     int rbd_mirror_image_get_global_status(
         rbd_image_t image,
         rbd_mirror_image_global_status_t *mirror_image_global_status,
         size_t status_size)
+     #新增API接口
+    #清空镜像卷全局状态
     void rbd_mirror_image_global_status_cleanup(
         rbd_mirror_image_global_status_t *mirror_image_global_status)
     int rbd_mirror_image_get_instance_id(rbd_image_t image, char *instance_id,
