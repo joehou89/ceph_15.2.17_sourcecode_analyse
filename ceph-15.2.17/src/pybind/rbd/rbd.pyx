@@ -1894,6 +1894,10 @@ class RBD(object):
         if ret != 0:
             raise make_ex(ret, 'error setting mirror mode')
 
+
+    #对比ceph14.2.22版本新增API
+    #功能介绍：Get pool mirror uuid，获取镜像卷uuid
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_uuid_get(self, ioctx):
         """
         Get pool mirror uuid
@@ -1968,6 +1972,9 @@ class RBD(object):
         if ret != 0:
             raise make_ex(ret, 'error importing bootstrap token')
 
+    #对比ceph14.2.22版本新增API参数
+    #功能介绍：添加远程对端镜像，新增参数
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_add(self, ioctx, site_name, client_name,
                         direction=RBD_MIRROR_PEER_DIRECTION_RX_TX):
         """
@@ -2030,6 +2037,9 @@ class RBD(object):
         """
         return MirrorPeerIterator(ioctx)
 
+    #对比ceph14.2.22版本API 修改
+    #功能介绍：设置远程镜像客户端名称
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_set_client(self, ioctx, uuid, client_name):
         """
         Set mirror peer client name
@@ -2053,6 +2063,9 @@ class RBD(object):
         if ret != 0:
             raise make_ex(ret, 'error setting mirror peer client name')
 
+    #对比ceph14.2.22版本新增API
+    #功能介绍：设置远程镜像地址名称
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_set_name(self, ioctx, uuid, site_name):
         """
         Set mirror peer site name
@@ -2075,9 +2088,15 @@ class RBD(object):
         if ret != 0:
             raise make_ex(ret, 'error setting mirror peer site name')
 
+    #对比ceph14.2.22版本API修改
+    #功能介绍：设置远程镜像集群名称,也是调用mirror_peer_set_name接口
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_set_cluster(self, ioctx, uuid, cluster_name):
         self.mirror_peer_set_name(ioctx, uuid, cluster_name)
 
+    #对比ceph14.2.22版本API修改
+    #功能介绍：获取远程镜像属性
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_get_attributes(self, ioctx, uuid):
         """
         Get optional mirror peer attributes
@@ -2121,6 +2140,9 @@ class RBD(object):
             free(_keys)
             free(_vals)
 
+    #对比ceph14.2.22版本API修改
+    #功能介绍：设置远程镜像属性
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_peer_set_attributes(self, ioctx, uuid, attributes):
         """
         Set optional mirror peer attributes
@@ -2195,6 +2217,9 @@ class RBD(object):
         """
         return MirrorImageInstanceIdIterator(ioctx)
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：遍历给定pool id的镜像卷的实例id
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def mirror_image_info_list(self, ioctx, mode_filter=None):
         """
         Iterate over the mirror image instance ids of a pool.
@@ -2299,6 +2324,9 @@ class RBD(object):
         """
         return ConfigPoolIterator(ioctx)
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：获取pool级别的配置信息
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def config_get(self, ioctx, key):
         """
         Get a pool-level configuration override.
@@ -2333,6 +2361,9 @@ class RBD(object):
         finally:
             free(value)
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：设置pool的配置信息
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def config_set(self, ioctx, key, value):
         """
         Get a pool-level configuration override.
@@ -2358,6 +2389,9 @@ class RBD(object):
             raise make_ex(ret, 'error setting config %s for pool %s' %
                           (key, ioctx.get_pool_name()))
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：删除pool的配置信息
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def config_remove(self, ioctx, key):
         """
         Remove a pool-level configuration override.
@@ -2650,6 +2684,9 @@ class RBD(object):
         finally:
             rbd_pool_stats_destroy(_stats)
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：特性bitmask转换为字符串
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def features_to_string(self, features):
         """
         Convert features bitmask to str.
@@ -2676,6 +2713,9 @@ class RBD(object):
         finally:
             free(str_features)
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：特性字符串转换为bitmask
+    #https://docs.ceph.com/en/pacific/rbd/api/librbdpy/
     def features_from_string(self, str_features):
         """
         Get features bitmask from str, if str_features is empty, it will return
@@ -2696,6 +2736,9 @@ class RBD(object):
             raise make_ex(ret, 'error getting features bitmask from str')
         return features
 
+    #对比ceph14.2.22版本API新增
+    #功能介绍：异步open给定快照卷
+    #https://docs.ceph.com/en/reef/rbd/api/librbdpy/
     def aio_open_image(self, oncomplete, ioctx, name=None, snapshot=None,
                        read_only=False, image_id=None):
         """
