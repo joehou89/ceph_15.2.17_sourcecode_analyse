@@ -35,10 +35,56 @@ pool2 81.0e    pg  {2,5,11}
 客户端命令执行ceph osd pool create pool pgnum pgpnum
 |void Monitor::handle_command(MonOpRequestRef op)
   |osdmon()->dispatch(op); #osd相关
-    |bool ConfigMonitor::preprocess_query(MonOpRequestRef op) #判断是否是MSG_MON_COMMAND命令
-      |bool OSDMonitor::preprocess_command(MonOpRequestRef op) #mon解析创建请求
+    |PaxosService::dispatch(MonOpRequestRef op)
+      |bool OSDMonitor::preprocess_query(MonOpRequestRef op)
+      |bool OSDMonitor::prepare_update(MonOpRequestRef op)
+        |bool OSDMonitor::prepare_command(MonOpRequestRef op)
+          |bool OSDMonitor::prepare_command_impl(MonOpRequestRef op, const cmdmap_t& cmdmap)
+            |create pool 逻辑
+              |int OSDMonitor::prepare_new_pool(MonOpRequestRef op)
+                |int OSDMonitor::prepare_new_pool(string& name,
+				        |int crush_rule,
+				        |const string &crush_rule_name,
+                |                 unsigned pg_num, unsigned pgp_num,
+				        |unsigned pg_num_min,
+                |                 const uint64_t repl_size,
+				        |const uint64_t target_size_bytes,
+				        |const float target_size_ratio,
+				        |const string &erasure_code_profile,
+                |                 const unsigned pool_type,
+                |                 const uint64_t expected_num_objects,
+                |                 FastReadType fast_read,
+				        |const string& pg_autoscale_mode,
+				        |ostream *ss)
+                  |prepare_pool_crush_rule
+                  |_get_pending_crush
+                  |prepare_pool_size
+                  |check_pg_num
+                  |check_crush_rule
+                  |prepare_pool_stripe_width
 
-```  
+```    
+整个流程做了两件事:  
+(1)创池pool动作，其中包含创pool所需的参数，这些参数是通过入参传进来，针对副本池或ec池进行区分;  
+(2)通过paxos::propose_pending 接口提交事务到paxos协议，通过paxos协议将更新后的osdmap同步给其他mon节点;  
+    
+具体的osd实例如何感知到osdmap是否发生了变化？  
+mon主动推送:此时mon集群已经同步完了最新的osdmap，此时mon集群会周期发送消息给osd;    
+osd周期拉取  
+当osd获取到最新的osdmap后，会触发创建pg流程  
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
