@@ -5351,6 +5351,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
   bufferlist rdata;
   stringstream ss, ds;
 
+  //函数入口check检查，格式检查
   cmdmap_t cmdmap;
   if (!cmdmap_from_json(m->cmd, &cmdmap, ss)) {
     string rs = ss.str();
@@ -5358,6 +5359,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     return true;
   }
 
+  //函数入口检查，链接是否正常
   MonSession *session = op->get_session();
   if (!session) {
     derr << __func__ << " no session" << dendl;
@@ -5365,13 +5367,14 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     return true;
   }
 
-  string prefix;
+  string prefix; //局部变量，存放ceph命令输入的字符串
   cmd_getval(cmdmap, "prefix", prefix);
 
   string format;
   cmd_getval(cmdmap, "format", format, string("plain"));
   boost::scoped_ptr<Formatter> f(Formatter::create(format));
 
+  /解析命令
   if (prefix == "osd stat") {
     if (f) {
       f->open_object_section("osdmap");
@@ -5383,6 +5386,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       rdata.append(ds);
     }
   }
+  //解析命令是否满足下面的字符串
   else if (prefix == "osd dump" ||
 	   prefix == "osd tree" ||
 	   prefix == "osd tree-from" ||
@@ -5390,9 +5394,9 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
 	   prefix == "osd getmap" ||
 	   prefix == "osd getcrushmap" ||
 	   prefix == "osd ls-tree" ||
-	   prefix == "osd info") {
+	   prefix == "osd info")
+  {
     string val;
-
     epoch_t epoch = 0;
     int64_t epochnum;
     cmd_getval(cmdmap, "epoch", epochnum, (int64_t)osdmap.get_epoch());
@@ -5425,64 +5429,64 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     if (prefix == "osd dump") {
       stringstream ds;
       if (f) {
-	f->open_object_section("osdmap");
-	p->dump(f.get());
-	f->close_section();
-	f->flush(ds);
+	      f->open_object_section("osdmap");
+	      p->dump(f.get());
+	      f->close_section();
+	      f->flush(ds);
       } else {
-	p->print(ds);
+	      p->print(ds);
       }
       rdata.append(ds);
       if (!f)
-	ds << " ";
+	      ds << " ";
     } else if (prefix == "osd ls") {
       if (f) {
-	f->open_array_section("osds");
-	for (int i = 0; i < osdmap.get_max_osd(); i++) {
-	  if (osdmap.exists(i)) {
-	    f->dump_int("osd", i);
-	  }
-	}
-	f->close_section();
-	f->flush(ds);
+	      f->open_array_section("osds");
+	      for (int i = 0; i < osdmap.get_max_osd(); i++) {
+	        if (osdmap.exists(i)) {
+	          f->dump_int("osd", i);
+	        }
+	      }
+        f->close_section();
+        f->flush(ds);
       } else {
-	bool first = true;
-	for (int i = 0; i < osdmap.get_max_osd(); i++) {
-	  if (osdmap.exists(i)) {
-	    if (!first)
-	      ds << "\n";
-	    first = false;
-	    ds << i;
-	  }
-	}
+        bool first = true;
+        for (int i = 0; i < osdmap.get_max_osd(); i++) {
+          if (osdmap.exists(i)) {
+            if (!first)
+              ds << "\n";
+            first = false;
+            ds << i;
+          }
+        }
       }
       rdata.append(ds);
     } else if (prefix == "osd info") {
       int64_t osd_id;
       bool do_single_osd = true;
       if (!cmd_getval(cmdmap, "id", osd_id)) {
-	do_single_osd = false;
+	      do_single_osd = false;
       }
 
       if (do_single_osd && !osdmap.exists(osd_id)) {
-	ss << "osd." << osd_id << " does not exist";
-	r = -EINVAL;
-	goto reply;
+        ss << "osd." << osd_id << " does not exist";
+        r = -EINVAL;
+        goto reply;
       }
 
       if (f) {
-	if (do_single_osd) {
-	  osdmap.dump_osd(osd_id, f.get());
-	} else {
-	  osdmap.dump_osds(f.get());
-	}
-	f->flush(ds);
+	      if (do_single_osd) {
+	        osdmap.dump_osd(osd_id, f.get());
+	      } else {
+	        osdmap.dump_osds(f.get());
+	      }
+	      f->flush(ds);
       } else {
-	if (do_single_osd) {
-	  osdmap.print_osd(osd_id, ds);
-	} else {
-	  osdmap.print_osds(ds);
-	}
+	      if (do_single_osd) {
+	        osdmap.print_osd(osd_id, ds);
+	      } else {
+	        osdmap.print_osds(ds);
+	      }
       }
       rdata.append(ds);
     } else if (prefix == "osd tree" || prefix == "osd tree-from") {
@@ -5506,50 +5510,50 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       cmd_getval(cmdmap, "states", states);
       unsigned filter = 0;
       for (auto& s : states) {
-	if (s == "up") {
-	  filter |= OSDMap::DUMP_UP;
-	} else if (s == "down") {
-	  filter |= OSDMap::DUMP_DOWN;
-	} else if (s == "in") {
-	  filter |= OSDMap::DUMP_IN;
-	} else if (s == "out") {
-	  filter |= OSDMap::DUMP_OUT;
-	} else if (s == "destroyed") {
-	  filter |= OSDMap::DUMP_DESTROYED;
-	} else {
-	  ss << "unrecognized state '" << s << "'";
-	  r = -EINVAL;
-	  goto reply;
-	}
+        if (s == "up") {
+          filter |= OSDMap::DUMP_UP;
+        } else if (s == "down") {
+          filter |= OSDMap::DUMP_DOWN;
+        } else if (s == "in") {
+          filter |= OSDMap::DUMP_IN;
+        } else if (s == "out") {
+          filter |= OSDMap::DUMP_OUT;
+        } else if (s == "destroyed") {
+          filter |= OSDMap::DUMP_DESTROYED;
+        } else {
+          ss << "unrecognized state '" << s << "'";
+          r = -EINVAL;
+          goto reply;
+        }
       }
-      if ((filter & (OSDMap::DUMP_IN|OSDMap::DUMP_OUT)) ==
-	  (OSDMap::DUMP_IN|OSDMap::DUMP_OUT)) {
-        ss << "cannot specify both 'in' and 'out'";
+      if ((filter & (OSDMap::DUMP_IN|OSDMap::DUMP_OUT)) == (OSDMap::DUMP_IN|OSDMap::DUMP_OUT)) {
+          ss << "cannot specify both 'in' and 'out'";
+          r = -EINVAL;
+          goto reply;
+      }
+      if (((filter & (OSDMap::DUMP_UP|OSDMap::DUMP_DOWN)) ==
+      (OSDMap::DUMP_UP|OSDMap::DUMP_DOWN)) ||
+            ((filter & (OSDMap::DUMP_UP|OSDMap::DUMP_DESTROYED)) ==
+            (OSDMap::DUMP_UP|OSDMap::DUMP_DESTROYED)) ||
+            ((filter & (OSDMap::DUMP_DOWN|OSDMap::DUMP_DESTROYED)) ==
+            (OSDMap::DUMP_DOWN|OSDMap::DUMP_DESTROYED))) {
+        ss << "can specify only one of 'up', 'down' and 'destroyed'";
         r = -EINVAL;
         goto reply;
       }
-      if (((filter & (OSDMap::DUMP_UP|OSDMap::DUMP_DOWN)) ==
-	   (OSDMap::DUMP_UP|OSDMap::DUMP_DOWN)) ||
-           ((filter & (OSDMap::DUMP_UP|OSDMap::DUMP_DESTROYED)) ==
-           (OSDMap::DUMP_UP|OSDMap::DUMP_DESTROYED)) ||
-           ((filter & (OSDMap::DUMP_DOWN|OSDMap::DUMP_DESTROYED)) ==
-           (OSDMap::DUMP_DOWN|OSDMap::DUMP_DESTROYED))) {
-	ss << "can specify only one of 'up', 'down' and 'destroyed'";
-	r = -EINVAL;
-	goto reply;
-      }
+
       if (f) {
-	f->open_object_section("tree");
-	p->print_tree(f.get(), NULL, filter, bucket);
-	f->close_section();
-	f->flush(ds);
+        f->open_object_section("tree");
+        p->print_tree(f.get(), NULL, filter, bucket);
+        f->close_section();
+        f->flush(ds);
       } else {
-	p->print_tree(NULL, &ds, filter, bucket);
+        p->print_tree(NULL, &ds, filter, bucket);
       }
       rdata.append(ds);
     } else if (prefix == "osd getmap") {
-      rdata.append(osdmap_bl);
-      ss << "got osdmap epoch " << p->get_epoch();
+        rdata.append(osdmap_bl);
+        ss << "got osdmap epoch " << p->get_epoch();
     } else if (prefix == "osd getcrushmap") {
       p->crush->encode(rdata, mon->get_quorum_con_features());
       ss << p->get_crush_version();
@@ -5586,7 +5590,6 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
           }
         }
       }
-
       rdata.append(ds);
     }
   } else if (prefix == "osd getmaxosd") {
@@ -5637,11 +5640,11 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       f->dump_string("host", p->second);
     }
     for (auto& k : {
-	"pod_name", "pod_namespace", // set by rook
-	"container_name"             // set by cephadm, ceph-ansible
-	}) {
+	    "pod_name", "pod_namespace", // set by rook
+	    "container_name"             // set by cephadm, ceph-ansible
+	    }) {
       if (auto p = m.find(k); p != m.end()) {
-	f->dump_string(k, p->second);
+	      f->dump_string(k, p->second);
       }
     }
 
@@ -5727,71 +5730,71 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     }
     for (int i=0; i<osdmap.get_max_osd(); ++i) {
       if (osdmap.exists(i)) {
-	map<string,string> m;
-	ostringstream err;
-	if (load_metadata(i, m, &err) < 0) {
-	  continue;
-	}
-	string host;
-	auto p = m.find("hostname");
-	if (p != m.end()) {
-	  host = p->second;
-	}
-	if (f) {
-	  f->open_object_section("osd");
-	  f->dump_int("osd", i);
-	  f->dump_string("host", host);
-	  for (auto n : { "network_numa_node", "objectstore_numa_node",
-		"numa_node" }) {
-	    p = m.find(n);
-	    if (p != m.end()) {
-	      f->dump_int(n, atoi(p->second.c_str()));
-	    }
-	  }
-	  for (auto n : { "network_numa_nodes", "objectstore_numa_nodes" }) {
-	    p = m.find(n);
-	    if (p != m.end()) {
-	      list<string> ls = get_str_list(p->second, ",");
-	      f->open_array_section(n);
-	      for (auto node : ls) {
-		f->dump_int("node", atoi(node.c_str()));
+	      map<string,string> m;
+	      ostringstream err;
+	      if (load_metadata(i, m, &err) < 0) {
+	        continue;
 	      }
-	      f->close_section();
-	    }
-	  }
-	  for (auto n : { "numa_node_cpus" }) {
-	    p = m.find(n);
-	    if (p != m.end()) {
-	      dump_cpu_list(f.get(), n, p->second);
-	    }
-	  }
-	  f->close_section();
-	} else {
-	  tbl << i;
-	  tbl << host;
-	  p = m.find("network_numa_nodes");
-	  if (p != m.end()) {
-	    tbl << p->second;
-	  } else {
-	    tbl << "-";
-	  }
-	  p = m.find("objectstore_numa_nodes");
-	  if (p != m.end()) {
-	    tbl << p->second;
-	  } else {
-	    tbl << "-";
-	  }
-	  p = m.find("numa_node");
-	  auto q = m.find("numa_node_cpus");
-	  if (p != m.end() && q != m.end()) {
-	    tbl << p->second;
-	    tbl << q->second;
-	  } else {
-	    tbl << "-";
-	    tbl << "-";
-	  }
-	  tbl << TextTable::endrow;
-	}
+        string host;
+        auto p = m.find("hostname");
+        if (p != m.end()) {
+          host = p->second;
+        }
+	      if (f) {
+          f->open_object_section("osd");
+          f->dump_int("osd", i);
+          f->dump_string("host", host);
+          for (auto n : { "network_numa_node", "objectstore_numa_node",
+          "numa_node" }) {
+            p = m.find(n);
+            if (p != m.end()) {
+              f->dump_int(n, atoi(p->second.c_str()));
+            }
+          }
+	        for (auto n : { "network_numa_nodes", "objectstore_numa_nodes" }) {
+	          p = m.find(n);
+	          if (p != m.end()) {
+	            list<string> ls = get_str_list(p->second, ",");
+	            f->open_array_section(n);
+	            for (auto node : ls) {
+		            f->dump_int("node", atoi(node.c_str()));
+	            }
+	            f->close_section();
+	          }
+	        }
+          for (auto n : { "numa_node_cpus" }) {
+            p = m.find(n);
+            if (p != m.end()) {
+              dump_cpu_list(f.get(), n, p->second);
+            }
+          }
+	        f->close_section();
+	      } else {
+	        tbl << i;
+	        tbl << host;
+          p = m.find("network_numa_nodes");
+          if (p != m.end()) {
+            tbl << p->second;
+          } else {
+            tbl << "-";
+          }
+          p = m.find("objectstore_numa_nodes");
+          if (p != m.end()) {
+            tbl << p->second;
+          } else {
+            tbl << "-";
+          }
+          p = m.find("numa_node");
+          auto q = m.find("numa_node_cpus");
+          if (p != m.end() && q != m.end()) {
+            tbl << p->second;
+            tbl << q->second;
+          } else {
+            tbl << "-";
+            tbl << "-";
+          }
+          tbl << TextTable::endrow;
+	      }
       }
     }
     if (f) {
@@ -5854,7 +5857,6 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
         << pg_vector_string(acting) << ", p" << acting_p << ")";
       rdata.append(ds);
     }
-
   } else if (prefix == "pg map") {
     pg_t pgid;
     string pgidstr;
@@ -5879,12 +5881,12 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       f->dump_stream("pgid") << mpgid;
       f->open_array_section("up");
       for (auto osd : up) {
-	f->dump_int("up_osd", osd);
+	      f->dump_int("up_osd", osd);
       }
       f->close_section();
       f->open_array_section("acting");
       for (auto osd : acting) {
-	f->dump_int("acting_osd", osd);
+	      f->dump_int("acting_osd", osd);
       }
       f->close_section();
       f->close_section();
@@ -5896,23 +5898,20 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       rdata.append(ds);
     }
     goto reply;
-
   } else if (prefix == "osd lspools") {
     if (f)
       f->open_array_section("pools");
-    for (map<int64_t, pg_pool_t>::iterator p = osdmap.pools.begin();
-	 p != osdmap.pools.end();
-	 ++p) {
+    for (map<int64_t, pg_pool_t>::iterator p = osdmap.pools.begin(); p != osdmap.pools.end(); ++p) {
       if (f) {
-	f->open_object_section("pool");
-	f->dump_int("poolnum", p->first);
-	f->dump_string("poolname", osdmap.pool_name[p->first]);
-	f->close_section();
+        f->open_object_section("pool");
+        f->dump_int("poolnum", p->first);
+        f->dump_string("poolname", osdmap.pool_name[p->first]);
+        f->close_section();
       } else {
-	ds << p->first << ' ' << osdmap.pool_name[p->first];
-	if (next(p) != osdmap.pools.end()) {
-	  ds << '\n';
-	}
+	      ds << p->first << ' ' << osdmap.pool_name[p->first];
+	      if (next(p) != osdmap.pools.end()) {
+	        ds << '\n';
+	      }
       }
     }
     if (f) {
@@ -5924,21 +5923,19 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     if (f)
       f->open_array_section("blacklist");
 
-    for (ceph::unordered_map<entity_addr_t,utime_t>::iterator p = osdmap.blacklist.begin();
-	 p != osdmap.blacklist.end();
-	 ++p) {
+    for (ceph::unordered_map<entity_addr_t,utime_t>::iterator p = osdmap.blacklist.begin(); p != osdmap.blacklist.end(); ++p) {
       if (f) {
-	f->open_object_section("entry");
-	f->dump_string("addr", p->first.get_legacy_str());
-	f->dump_stream("until") << p->second;
-	f->close_section();
+        f->open_object_section("entry");
+        f->dump_string("addr", p->first.get_legacy_str());
+        f->dump_stream("until") << p->second;
+        f->close_section();
       } else {
-	stringstream ss;
-	string s;
-	ss << p->first << " " << p->second;
-	getline(ss, s);
-	s += "\n";
-	rdata.append(s);
+        stringstream ss;
+        string s;
+        ss << p->first << " " << p->second;
+        getline(ss, s);
+        s += "\n";
+        rdata.append(s);
       }
     }
     if (f) {
@@ -5946,7 +5943,6 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       f->flush(rdata);
     }
     ss << "listed " << osdmap.blacklist.size() << " entries";
-
   } else if (prefix == "osd pool ls") {
     string detail;
     cmd_getval(cmdmap, "detail", detail);
@@ -5956,30 +5952,27 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       rdata.append(ss.str());
     } else {
       if (f)
-	f->open_array_section("pools");
-      for (map<int64_t,pg_pool_t>::const_iterator it = osdmap.get_pools().begin();
-	   it != osdmap.get_pools().end();
-	   ++it) {
-	if (f) {
-	  if (detail == "detail") {
-	    f->open_object_section("pool");
-	    f->dump_int("pool_id", it->first);
-	    f->dump_string("pool_name", osdmap.get_pool_name(it->first));
-	    it->second.dump(f.get());
-	    f->close_section();
-	  } else {
-	    f->dump_string("pool_name", osdmap.get_pool_name(it->first));
-	  }
-	} else {
-	  rdata.append(osdmap.get_pool_name(it->first) + "\n");
-	}
+	      f->open_array_section("pools");
+      for (map<int64_t,pg_pool_t>::const_iterator it = osdmap.get_pools().begin(); it != osdmap.get_pools().end(); ++it) {
+	      if (f) {
+	        if (detail == "detail") {
+            f->open_object_section("pool");
+            f->dump_int("pool_id", it->first);
+            f->dump_string("pool_name", osdmap.get_pool_name(it->first));
+            it->second.dump(f.get());
+            f->close_section();
+	        } else {
+	          f->dump_string("pool_name", osdmap.get_pool_name(it->first));
+	        }
+	      } else {
+	        rdata.append(osdmap.get_pool_name(it->first) + "\n");
+	      }
       }
       if (f) {
-	f->close_section();
-	f->flush(rdata);
+        f->close_section();
+        f->flush(rdata);
       }
     }
-
   } else if (prefix == "osd crush get-tunable") {
     string tunable;
     cmd_getval(cmdmap, "tunable", tunable);
@@ -5988,9 +5981,9 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       f->open_object_section("tunable");
     if (tunable == "straw_calc_version") {
       if (f)
-	f->dump_int(tunable.c_str(), osdmap.crush->get_straw_calc_version());
+	      f->dump_int(tunable.c_str(), osdmap.crush->get_straw_calc_version());
       else
-	rss << osdmap.crush->get_straw_calc_version() << "\n";
+	      rss << osdmap.crush->get_straw_calc_version() << "\n";
     } else {
       r = -EINVAL;
       goto reply;
@@ -6002,7 +5995,6 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       rdata.append(rss.str());
     }
     r = 0;
-
   } else if (prefix == "osd pool get") {
     string poolstr;
     cmd_getval(cmdmap, "pool", poolstr);
@@ -6082,18 +6074,17 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
 
     choices_set_t selected_choices;
     if (var == "all") {
-      for(choices_map_t::const_iterator it = ALL_CHOICES.begin();
-	  it != ALL_CHOICES.end(); ++it) {
-	selected_choices.insert(it->second);
+      for(choices_map_t::const_iterator it = ALL_CHOICES.begin(); it != ALL_CHOICES.end(); ++it) {
+	      selected_choices.insert(it->second);
       }
 
       if(!p->is_tier()) {
-	selected_choices = subtract_second_from_first(selected_choices,
+	      selected_choices = subtract_second_from_first(selected_choices,
 						      ONLY_TIER_CHOICES);
       }
 
       if(!p->is_erasure()) {
-	selected_choices = subtract_second_from_first(selected_choices,
+	      selected_choices = subtract_second_from_first(selected_choices,
 						      ONLY_ERASURE_CHOICES);
       }
     } else /* var != "all" */  {
@@ -6107,30 +6098,25 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
 
       osd_pool_get_choices selected = found->second;
 
-      if (!p->is_tier() &&
-	  ONLY_TIER_CHOICES.find(selected) != ONLY_TIER_CHOICES.end()) {
-	ss << "pool '" << poolstr
-	   << "' is not a tier pool: variable not applicable";
-	r = -EACCES;
-	goto reply;
+      if (!p->is_tier() && ONLY_TIER_CHOICES.find(selected) != ONLY_TIER_CHOICES.end()) {
+	      ss << "pool '" << poolstr
+           << "' is not a tier pool: variable not applicable";
+	      r = -EACCES;
+	      goto reply;
       }
 
-      if (!p->is_erasure() &&
-	  ONLY_ERASURE_CHOICES.find(selected)
-	  != ONLY_ERASURE_CHOICES.end()) {
-	ss << "pool '" << poolstr
-	   << "' is not a erasure pool: variable not applicable";
-	r = -EACCES;
-	goto reply;
+      if (!p->is_erasure() && ONLY_ERASURE_CHOICES.find(selected) != ONLY_ERASURE_CHOICES.end()) {
+	      ss << "pool '" << poolstr
+	         << "' is not a erasure pool: variable not applicable";
+	      r = -EACCES;
+	      goto reply;
       }
 
-      if (pool_opts_t::is_opt_name(var) &&
-	  !p->opts.is_set(pool_opts_t::get_opt_desc(var).key)) {
-	ss << "option '" << var << "' is not set on pool '" << poolstr << "'";
-	r = -ENOENT;
-	goto reply;
+      if (pool_opts_t::is_opt_name(var) && !p->opts.is_set(pool_opts_t::get_opt_desc(var).key)) {
+	      ss << "option '" << var << "' is not set on pool '" << poolstr << "'";
+	      r = -ENOENT;
+	      goto reply;
       }
-
       selected_choices.insert(selected);
     }
 
@@ -6138,154 +6124,141 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       f->open_object_section("pool");
       f->dump_string("pool", poolstr);
       f->dump_int("pool_id", pool);
-      for(choices_set_t::const_iterator it = selected_choices.begin();
-	  it != selected_choices.end(); ++it) {
-	choices_map_t::const_iterator i;
+      for(choices_set_t::const_iterator it = selected_choices.begin(); it != selected_choices.end(); ++it) {
+	      choices_map_t::const_iterator i;
         for (i = ALL_CHOICES.begin(); i != ALL_CHOICES.end(); ++i) {
           if (i->second == *it) {
             break;
           }
         }
         ceph_assert(i != ALL_CHOICES.end());
-	switch(*it) {
-	  case PG_NUM:
-	    f->dump_int("pg_num", p->get_pg_num());
-	    break;
-	  case PGP_NUM:
-	    f->dump_int("pgp_num", p->get_pgp_num());
-	    break;
-	  case SIZE:
-	    f->dump_int("size", p->get_size());
-	    break;
-	  case MIN_SIZE:
-	    f->dump_int("min_size", p->get_min_size());
-	    break;
-	  case CRUSH_RULE:
-	    if (osdmap.crush->rule_exists(p->get_crush_rule())) {
-	      f->dump_string("crush_rule", osdmap.crush->get_rule_name(
-			       p->get_crush_rule()));
-	    } else {
-	      f->dump_string("crush_rule", stringify(p->get_crush_rule()));
-	    }
-	    break;
-	  case EC_OVERWRITES:
-	    f->dump_bool("allow_ec_overwrites",
-                         p->has_flag(pg_pool_t::FLAG_EC_OVERWRITES));
-	    break;
-	  case PG_AUTOSCALE_MODE:
-	    f->dump_string("pg_autoscale_mode",
-			   pg_pool_t::get_pg_autoscale_mode_name(
-			     p->pg_autoscale_mode));
-	    break;
-	  case HASHPSPOOL:
-	  case NODELETE:
-	  case NOPGCHANGE:
-	  case NOSIZECHANGE:
-	  case WRITE_FADVISE_DONTNEED:
-	  case NOSCRUB:
-	  case NODEEP_SCRUB:
-	    f->dump_bool(i->first.c_str(),
-			   p->has_flag(pg_pool_t::get_flag_by_name(i->first)));
-	    break;
-	  case HIT_SET_PERIOD:
-	    f->dump_int("hit_set_period", p->hit_set_period);
-	    break;
-	  case HIT_SET_COUNT:
-	    f->dump_int("hit_set_count", p->hit_set_count);
-	    break;
-	  case HIT_SET_TYPE:
-	    f->dump_string("hit_set_type",
-			   HitSet::get_type_name(p->hit_set_params.get_type()));
-	    break;
-	  case HIT_SET_FPP:
-	    {
-	      if (p->hit_set_params.get_type() == HitSet::TYPE_BLOOM) {
-		BloomHitSet::Params *bloomp =
-		  static_cast<BloomHitSet::Params*>(p->hit_set_params.impl.get());
-		f->dump_float("hit_set_fpp", bloomp->get_fpp());
-	      } else if(var != "all") {
-		f->close_section();
-		ss << "hit set is not of type Bloom; " <<
-		  "invalid to get a false positive rate!";
-		r = -EINVAL;
-		goto reply;
-	      }
-	    }
-	    break;
-	  case USE_GMT_HITSET:
-	    f->dump_bool("use_gmt_hitset", p->use_gmt_hitset);
-	    break;
-	  case TARGET_MAX_OBJECTS:
-	    f->dump_unsigned("target_max_objects", p->target_max_objects);
-	    break;
-	  case TARGET_MAX_BYTES:
-	    f->dump_unsigned("target_max_bytes", p->target_max_bytes);
-	    break;
-	  case CACHE_TARGET_DIRTY_RATIO:
-	    f->dump_unsigned("cache_target_dirty_ratio_micro",
-			     p->cache_target_dirty_ratio_micro);
-	    f->dump_float("cache_target_dirty_ratio",
-			  ((float)p->cache_target_dirty_ratio_micro/1000000));
-	    break;
-	  case CACHE_TARGET_DIRTY_HIGH_RATIO:
-	    f->dump_unsigned("cache_target_dirty_high_ratio_micro",
-			     p->cache_target_dirty_high_ratio_micro);
-	    f->dump_float("cache_target_dirty_high_ratio",
-			  ((float)p->cache_target_dirty_high_ratio_micro/1000000));
-	    break;
-	  case CACHE_TARGET_FULL_RATIO:
-	    f->dump_unsigned("cache_target_full_ratio_micro",
-			     p->cache_target_full_ratio_micro);
-	    f->dump_float("cache_target_full_ratio",
-			  ((float)p->cache_target_full_ratio_micro/1000000));
-	    break;
-	  case CACHE_MIN_FLUSH_AGE:
-	    f->dump_unsigned("cache_min_flush_age", p->cache_min_flush_age);
-	    break;
-	  case CACHE_MIN_EVICT_AGE:
-	    f->dump_unsigned("cache_min_evict_age", p->cache_min_evict_age);
-	    break;
-	  case ERASURE_CODE_PROFILE:
-	    f->dump_string("erasure_code_profile", p->erasure_code_profile);
-	    break;
-	  case MIN_READ_RECENCY_FOR_PROMOTE:
-	    f->dump_int("min_read_recency_for_promote",
-			p->min_read_recency_for_promote);
-	    break;
-	  case MIN_WRITE_RECENCY_FOR_PROMOTE:
-	    f->dump_int("min_write_recency_for_promote",
-			p->min_write_recency_for_promote);
-	    break;
+	      switch(*it) {
+	        case PG_NUM:
+	          f->dump_int("pg_num", p->get_pg_num());
+	          break;
+	        case PGP_NUM:
+	          f->dump_int("pgp_num", p->get_pgp_num());
+	          break;
+	        case SIZE:
+	          f->dump_int("size", p->get_size());
+	          break;
+	        case MIN_SIZE:
+	          f->dump_int("min_size", p->get_min_size());
+	          break;
+	        case CRUSH_RULE:
+	          if (osdmap.crush->rule_exists(p->get_crush_rule())) {
+	            f->dump_string("crush_rule", osdmap.crush->get_rule_name(p->get_crush_rule()));
+	          } else {
+	            f->dump_string("crush_rule", stringify(p->get_crush_rule()));
+	          }
+	          break;
+	        case EC_OVERWRITES:
+	          f->dump_bool("allow_ec_overwrites", p->has_flag(pg_pool_t::FLAG_EC_OVERWRITES));
+	          break;
+	        case PG_AUTOSCALE_MODE:
+	          f->dump_string("pg_autoscale_mode", pg_pool_t::get_pg_autoscale_mode_name(p->pg_autoscale_mode));
+	          break;
+          case HASHPSPOOL:
+          case NODELETE:
+          case NOPGCHANGE:
+          case NOSIZECHANGE:
+          case WRITE_FADVISE_DONTNEED:
+          case NOSCRUB:
+          case NODEEP_SCRUB:
+	          f->dump_bool(i->first.c_str(),
+			      p->has_flag(pg_pool_t::get_flag_by_name(i->first)));
+	          break;
+	        case HIT_SET_PERIOD:
+	          f->dump_int("hit_set_period", p->hit_set_period);
+	          break;
+	        case HIT_SET_COUNT:
+	          f->dump_int("hit_set_count", p->hit_set_count);
+	          break;
+	        case HIT_SET_TYPE:
+	          f->dump_string("hit_set_type", HitSet::get_type_name(p->hit_set_params.get_type()));
+	          break;
+	        case HIT_SET_FPP:
+	        {
+	          if (p->hit_set_params.get_type() == HitSet::TYPE_BLOOM) {
+		          BloomHitSet::Params *bloomp = static_cast<BloomHitSet::Params*>(p->hit_set_params.impl.get());
+		          f->dump_float("hit_set_fpp", bloomp->get_fpp());
+            } else if(var != "all") {
+		          f->close_section();
+		          ss << "hit set is not of type Bloom; " << "invalid to get a false positive rate!";
+		          r = -EINVAL;
+		          goto reply;
+	          }
+	        }
+	        break;
+	        case USE_GMT_HITSET:
+	          f->dump_bool("use_gmt_hitset", p->use_gmt_hitset);
+	          break;
+	        case TARGET_MAX_OBJECTS:
+            f->dump_unsigned("target_max_objects", p->target_max_objects);
+            break;
+	        case TARGET_MAX_BYTES:
+            f->dump_unsigned("target_max_bytes", p->target_max_bytes);
+            break;
+	        case CACHE_TARGET_DIRTY_RATIO:
+	          f->dump_unsigned("cache_target_dirty_ratio_micro",
+			      p->cache_target_dirty_ratio_micro);
+	          f->dump_float("cache_target_dirty_ratio", ((float)p->cache_target_dirty_ratio_micro/1000000));
+	          break;
+	        case CACHE_TARGET_DIRTY_HIGH_RATIO:
+	          f->dump_unsigned("cache_target_dirty_high_ratio_micro", p->cache_target_dirty_high_ratio_micro);
+	          f->dump_float("cache_target_dirty_high_ratio", ((float)p->cache_target_dirty_high_ratio_micro/1000000));
+	          break;
+	        case CACHE_TARGET_FULL_RATIO:
+	          f->dump_unsigned("cache_target_full_ratio_micro", p->cache_target_full_ratio_micro);
+	          f->dump_float("cache_target_full_ratio", ((float)p->cache_target_full_ratio_micro/1000000));
+	          break;
+	        case CACHE_MIN_FLUSH_AGE:
+	          f->dump_unsigned("cache_min_flush_age", p->cache_min_flush_age);
+	          break;
+	        case CACHE_MIN_EVICT_AGE:
+	          f->dump_unsigned("cache_min_evict_age", p->cache_min_evict_age);
+	          break;
+	        case ERASURE_CODE_PROFILE:
+	          f->dump_string("erasure_code_profile", p->erasure_code_profile);
+	          break;
+	        case MIN_READ_RECENCY_FOR_PROMOTE:
+            f->dump_int("min_read_recency_for_promote",
+            p->min_read_recency_for_promote);
+            break;
+	        case MIN_WRITE_RECENCY_FOR_PROMOTE:
+            f->dump_int("min_write_recency_for_promote",
+            p->min_write_recency_for_promote);
+            break;
           case FAST_READ:
             f->dump_int("fast_read", p->fast_read);
             break;
-	  case HIT_SET_GRADE_DECAY_RATE:
-	    f->dump_int("hit_set_grade_decay_rate",
-			p->hit_set_grade_decay_rate);
-	    break;
-	  case HIT_SET_SEARCH_LAST_N:
-	    f->dump_int("hit_set_search_last_n",
-			p->hit_set_search_last_n);
-	    break;
-	  case SCRUB_MIN_INTERVAL:
-	  case SCRUB_MAX_INTERVAL:
-	  case DEEP_SCRUB_INTERVAL:
+          case HIT_SET_GRADE_DECAY_RATE:
+            f->dump_int("hit_set_grade_decay_rate",
+            p->hit_set_grade_decay_rate);
+            break;
+          case HIT_SET_SEARCH_LAST_N:
+            f->dump_int("hit_set_search_last_n",
+            p->hit_set_search_last_n);
+            break;
+          case SCRUB_MIN_INTERVAL:
+          case SCRUB_MAX_INTERVAL:
+          case DEEP_SCRUB_INTERVAL:
           case RECOVERY_PRIORITY:
           case RECOVERY_OP_PRIORITY:
           case SCRUB_PRIORITY:
-	  case COMPRESSION_MODE:
-	  case COMPRESSION_ALGORITHM:
-	  case COMPRESSION_REQUIRED_RATIO:
-	  case COMPRESSION_MAX_BLOB_SIZE:
-	  case COMPRESSION_MIN_BLOB_SIZE:
-	  case CSUM_TYPE:
-	  case CSUM_MAX_BLOCK:
-	  case CSUM_MIN_BLOCK:
-	  case FINGERPRINT_ALGORITHM:
-	  case PG_NUM_MIN:
-	  case TARGET_SIZE_BYTES:
-	  case TARGET_SIZE_RATIO:
-	  case PG_AUTOSCALE_BIAS:
+          case COMPRESSION_MODE:
+          case COMPRESSION_ALGORITHM:
+          case COMPRESSION_REQUIRED_RATIO:
+          case COMPRESSION_MAX_BLOB_SIZE:
+          case COMPRESSION_MIN_BLOB_SIZE:
+          case CSUM_TYPE:
+          case CSUM_MAX_BLOCK:
+          case CSUM_MIN_BLOCK:
+          case FINGERPRINT_ALGORITHM:
+          case PG_NUM_MIN:
+          case TARGET_SIZE_BYTES:
+          case TARGET_SIZE_RATIO:
+          case PG_AUTOSCALE_BIAS:
             pool_opts_t::key_t key = pool_opts_t::get_opt_desc(i->first).key;
             if (p->opts.is_set(key)) {
               if(*it == CSUM_TYPE) {
@@ -6295,231 +6268,224 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
               } else {
                 p->opts.dump(i->first, f.get());
               }
-	    }
+	          }
             break;
-	}
-      }
-      f->close_section();
-      f->flush(rdata);
-    } else /* !f */ {
-      for(choices_set_t::const_iterator it = selected_choices.begin();
-	  it != selected_choices.end(); ++it) {
-	choices_map_t::const_iterator i;
-	switch(*it) {
-	  case PG_NUM:
-	    ss << "pg_num: " << p->get_pg_num() << "\n";
-	    break;
-	  case PGP_NUM:
-	    ss << "pgp_num: " << p->get_pgp_num() << "\n";
-	    break;
-	  case SIZE:
-	    ss << "size: " << p->get_size() << "\n";
-	    break;
-	  case MIN_SIZE:
-	    ss << "min_size: " << p->get_min_size() << "\n";
-	    break;
-	  case CRUSH_RULE:
-	    if (osdmap.crush->rule_exists(p->get_crush_rule())) {
-	      ss << "crush_rule: " << osdmap.crush->get_rule_name(
-		p->get_crush_rule()) << "\n";
-	    } else {
-	      ss << "crush_rule: " << p->get_crush_rule() << "\n";
-	    }
-	    break;
-	  case PG_AUTOSCALE_MODE:
-	    ss << "pg_autoscale_mode: " << pg_pool_t::get_pg_autoscale_mode_name(
-	      p->pg_autoscale_mode) <<"\n";
-	    break;
-	  case HIT_SET_PERIOD:
-	    ss << "hit_set_period: " << p->hit_set_period << "\n";
-	    break;
-	  case HIT_SET_COUNT:
-	    ss << "hit_set_count: " << p->hit_set_count << "\n";
-	    break;
-	  case HIT_SET_TYPE:
-	    ss << "hit_set_type: " <<
-	      HitSet::get_type_name(p->hit_set_params.get_type()) << "\n";
-	    break;
-	  case HIT_SET_FPP:
-	    {
-	      if (p->hit_set_params.get_type() == HitSet::TYPE_BLOOM) {
-		BloomHitSet::Params *bloomp =
-		  static_cast<BloomHitSet::Params*>(p->hit_set_params.impl.get());
-		ss << "hit_set_fpp: " << bloomp->get_fpp() << "\n";
-	      } else if(var != "all") {
-		ss << "hit set is not of type Bloom; " <<
-		  "invalid to get a false positive rate!";
-		r = -EINVAL;
-		goto reply;
-	      }
-	    }
-	    break;
-	  case USE_GMT_HITSET:
-	    ss << "use_gmt_hitset: " << p->use_gmt_hitset << "\n";
-	    break;
-	  case TARGET_MAX_OBJECTS:
-	    ss << "target_max_objects: " << p->target_max_objects << "\n";
-	    break;
-	  case TARGET_MAX_BYTES:
-	    ss << "target_max_bytes: " << p->target_max_bytes << "\n";
-	    break;
-	  case CACHE_TARGET_DIRTY_RATIO:
-	    ss << "cache_target_dirty_ratio: "
-	       << ((float)p->cache_target_dirty_ratio_micro/1000000) << "\n";
-	    break;
-	  case CACHE_TARGET_DIRTY_HIGH_RATIO:
-	    ss << "cache_target_dirty_high_ratio: "
-	       << ((float)p->cache_target_dirty_high_ratio_micro/1000000) << "\n";
-	    break;
-	  case CACHE_TARGET_FULL_RATIO:
-	    ss << "cache_target_full_ratio: "
-	       << ((float)p->cache_target_full_ratio_micro/1000000) << "\n";
-	    break;
-	  case CACHE_MIN_FLUSH_AGE:
-	    ss << "cache_min_flush_age: " << p->cache_min_flush_age << "\n";
-	    break;
-	  case CACHE_MIN_EVICT_AGE:
-	    ss << "cache_min_evict_age: " << p->cache_min_evict_age << "\n";
-	    break;
-	  case ERASURE_CODE_PROFILE:
-	    ss << "erasure_code_profile: " << p->erasure_code_profile << "\n";
-	    break;
-	  case MIN_READ_RECENCY_FOR_PROMOTE:
-	    ss << "min_read_recency_for_promote: " <<
-	      p->min_read_recency_for_promote << "\n";
-	    break;
-	  case HIT_SET_GRADE_DECAY_RATE:
-	    ss << "hit_set_grade_decay_rate: " <<
-	      p->hit_set_grade_decay_rate << "\n";
-	    break;
-	  case HIT_SET_SEARCH_LAST_N:
-	    ss << "hit_set_search_last_n: " <<
-	      p->hit_set_search_last_n << "\n";
-	    break;
-	  case EC_OVERWRITES:
-	    ss << "allow_ec_overwrites: " <<
-	      (p->has_flag(pg_pool_t::FLAG_EC_OVERWRITES) ? "true" : "false") <<
-	      "\n";
-	    break;
-	  case HASHPSPOOL:
-	  case NODELETE:
-	  case NOPGCHANGE:
-	  case NOSIZECHANGE:
-	  case WRITE_FADVISE_DONTNEED:
-	  case NOSCRUB:
-	  case NODEEP_SCRUB:
-	    for (i = ALL_CHOICES.begin(); i != ALL_CHOICES.end(); ++i) {
-	      if (i->second == *it)
-		break;
-	    }
-	    ceph_assert(i != ALL_CHOICES.end());
-	    ss << i->first << ": " <<
-	      (p->has_flag(pg_pool_t::get_flag_by_name(i->first)) ?
-	       "true" : "false") << "\n";
-	    break;
-	  case MIN_WRITE_RECENCY_FOR_PROMOTE:
-	    ss << "min_write_recency_for_promote: " <<
-	      p->min_write_recency_for_promote << "\n";
-	    break;
-          case FAST_READ:
-            ss << "fast_read: " << p->fast_read << "\n";
-            break;
-	  case SCRUB_MIN_INTERVAL:
-	  case SCRUB_MAX_INTERVAL:
-	  case DEEP_SCRUB_INTERVAL:
-          case RECOVERY_PRIORITY:
-          case RECOVERY_OP_PRIORITY:
-          case SCRUB_PRIORITY:
-	  case COMPRESSION_MODE:
-	  case COMPRESSION_ALGORITHM:
-	  case COMPRESSION_REQUIRED_RATIO:
-	  case COMPRESSION_MAX_BLOB_SIZE:
-	  case COMPRESSION_MIN_BLOB_SIZE:
-	  case CSUM_TYPE:
-	  case CSUM_MAX_BLOCK:
-	  case CSUM_MIN_BLOCK:
-	  case FINGERPRINT_ALGORITHM:
-	  case PG_NUM_MIN:
-	  case TARGET_SIZE_BYTES:
-	  case TARGET_SIZE_RATIO:
-	  case PG_AUTOSCALE_BIAS:
-	    for (i = ALL_CHOICES.begin(); i != ALL_CHOICES.end(); ++i) {
-	      if (i->second == *it)
-		break;
-	    }
-	    ceph_assert(i != ALL_CHOICES.end());
-	    {
-	      pool_opts_t::key_t key = pool_opts_t::get_opt_desc(i->first).key;
-	      if (p->opts.is_set(key)) {
-                if(key == pool_opts_t::CSUM_TYPE) {
-                  int64_t val;
-                  p->opts.get(key, &val);
-  		  ss << i->first << ": " << Checksummer::get_csum_type_string(val) << "\n";
+	        }
+        }
+        f->close_section();
+        f->flush(rdata);
+      } else /* !f */ {
+        for(choices_set_t::const_iterator it = selected_choices.begin(); it != selected_choices.end(); ++it) {
+	        choices_map_t::const_iterator i;
+	        switch(*it) {
+	          case PG_NUM:
+              ss << "pg_num: " << p->get_pg_num() << "\n";
+              break;
+            case PGP_NUM:
+              ss << "pgp_num: " << p->get_pgp_num() << "\n";
+              break;
+            case SIZE:
+              ss << "size: " << p->get_size() << "\n";
+              break;
+            case MIN_SIZE:
+              ss << "min_size: " << p->get_min_size() << "\n";
+              break;
+            case CRUSH_RULE:
+	            if (osdmap.crush->rule_exists(p->get_crush_rule())) {
+	              ss << "crush_rule: " << osdmap.crush->get_rule_name(p->get_crush_rule()) << "\n";
+	            } else {
+	              ss << "crush_rule: " << p->get_crush_rule() << "\n";
+	            }
+	            break;
+            case PG_AUTOSCALE_MODE:
+              ss << "pg_autoscale_mode: " << pg_pool_t::get_pg_autoscale_mode_name(
+                p->pg_autoscale_mode) <<"\n";
+              break;
+            case HIT_SET_PERIOD:
+              ss << "hit_set_period: " << p->hit_set_period << "\n";
+              break;
+            case HIT_SET_COUNT:
+              ss << "hit_set_count: " << p->hit_set_count << "\n";
+              break;
+            case HIT_SET_TYPE:
+              ss << "hit_set_type: " <<
+                HitSet::get_type_name(p->hit_set_params.get_type()) << "\n";
+              break;
+	          case HIT_SET_FPP:
+	          {
+	            if (p->hit_set_params.get_type() == HitSet::TYPE_BLOOM) {
+		            BloomHitSet::Params *bloomp = static_cast<BloomHitSet::Params*>(p->hit_set_params.impl.get());
+		            ss << "hit_set_fpp: " << bloomp->get_fpp() << "\n";
+	            } else if(var != "all") {
+		            ss << "hit set is not of type Bloom; " << "invalid to get a false positive rate!";
+		            r = -EINVAL;
+		            goto reply;
+	            }
+	          }
+	          break;
+            case USE_GMT_HITSET:
+              ss << "use_gmt_hitset: " << p->use_gmt_hitset << "\n";
+              break;
+            case TARGET_MAX_OBJECTS:
+              ss << "target_max_objects: " << p->target_max_objects << "\n";
+              break;
+            case TARGET_MAX_BYTES:
+              ss << "target_max_bytes: " << p->target_max_bytes << "\n";
+              break;
+            case CACHE_TARGET_DIRTY_RATIO:
+              ss << "cache_target_dirty_ratio: "
+                << ((float)p->cache_target_dirty_ratio_micro/1000000) << "\n";
+              break;
+            case CACHE_TARGET_DIRTY_HIGH_RATIO:
+              ss << "cache_target_dirty_high_ratio: "
+                << ((float)p->cache_target_dirty_high_ratio_micro/1000000) << "\n";
+              break;
+            case CACHE_TARGET_FULL_RATIO:
+              ss << "cache_target_full_ratio: "
+                << ((float)p->cache_target_full_ratio_micro/1000000) << "\n";
+              break;
+            case CACHE_MIN_FLUSH_AGE:
+              ss << "cache_min_flush_age: " << p->cache_min_flush_age << "\n";
+              break;
+            case CACHE_MIN_EVICT_AGE:
+              ss << "cache_min_evict_age: " << p->cache_min_evict_age << "\n";
+              break;
+            case ERASURE_CODE_PROFILE:
+              ss << "erasure_code_profile: " << p->erasure_code_profile << "\n";
+              break;
+            case MIN_READ_RECENCY_FOR_PROMOTE:
+              ss << "min_read_recency_for_promote: " <<
+                p->min_read_recency_for_promote << "\n";
+              break;
+            case HIT_SET_GRADE_DECAY_RATE:
+              ss << "hit_set_grade_decay_rate: " <<
+                p->hit_set_grade_decay_rate << "\n";
+              break;
+            case HIT_SET_SEARCH_LAST_N:
+              ss << "hit_set_search_last_n: " <<
+                p->hit_set_search_last_n << "\n";
+              break;
+            case EC_OVERWRITES:
+              ss << "allow_ec_overwrites: " <<
+                (p->has_flag(pg_pool_t::FLAG_EC_OVERWRITES) ? "true" : "false") <<
+                "\n";
+              break;
+            case HASHPSPOOL:
+            case NODELETE:
+            case NOPGCHANGE:
+            case NOSIZECHANGE:
+            case WRITE_FADVISE_DONTNEED:
+            case NOSCRUB:
+            case NODEEP_SCRUB:
+              for (i = ALL_CHOICES.begin(); i != ALL_CHOICES.end(); ++i) {
+                if (i->second == *it)
+                  break;
+	            }   
+	            ceph_assert(i != ALL_CHOICES.end());
+	            ss << i->first << ": " << (p->has_flag(pg_pool_t::get_flag_by_name(i->first)) ? "true" : "false") << "\n";
+	            break;
+	          case MIN_WRITE_RECENCY_FOR_PROMOTE:
+	            ss << "min_write_recency_for_promote: " << p->min_write_recency_for_promote << "\n";
+	            break;
+            case FAST_READ:
+              ss << "fast_read: " << p->fast_read << "\n";
+              break;
+            case SCRUB_MIN_INTERVAL:
+            case SCRUB_MAX_INTERVAL:
+            case DEEP_SCRUB_INTERVAL:
+            case RECOVERY_PRIORITY:
+            case RECOVERY_OP_PRIORITY:
+            case SCRUB_PRIORITY:
+            case COMPRESSION_MODE:
+            case COMPRESSION_ALGORITHM:
+            case COMPRESSION_REQUIRED_RATIO:
+            case COMPRESSION_MAX_BLOB_SIZE:
+            case COMPRESSION_MIN_BLOB_SIZE:
+            case CSUM_TYPE:
+            case CSUM_MAX_BLOCK:
+            case CSUM_MIN_BLOCK:
+            case FINGERPRINT_ALGORITHM:
+            case PG_NUM_MIN:
+            case TARGET_SIZE_BYTES:
+            case TARGET_SIZE_RATIO:
+            case PG_AUTOSCALE_BIAS:
+	            for (i = ALL_CHOICES.begin(); i != ALL_CHOICES.end(); ++i) {
+	              if (i->second == *it)
+		              break;
+	            }
+	            ceph_assert(i != ALL_CHOICES.end());
+	            {
+	              pool_opts_t::key_t key = pool_opts_t::get_opt_desc(i->first).key;
+	              if (p->opts.is_set(key)) {
+                  if(key == pool_opts_t::CSUM_TYPE) {
+                    int64_t val;
+                    p->opts.get(key, &val);
+  		              ss << i->first << ": " << Checksummer::get_csum_type_string(val) << "\n";
                 } else {
-  		  ss << i->first << ": " << p->opts.get(key) << "\n";
+  		            ss << i->first << ": " << p->opts.get(key) << "\n";
                 }
-	      }
-	    }
-	    break;
-	}
-	rdata.append(ss.str());
-	ss.str("");
+	            }
+	          }
+	          break;
+	        }
+	        rdata.append(ss.str());
+	        ss.str("");
+        }
       }
-    }
-    r = 0;
-  } else if (prefix == "osd pool get-quota") {
-    string pool_name;
-    cmd_getval(cmdmap, "pool", pool_name);
+      r = 0;
+    } else if (prefix == "osd pool get-quota") {
+      string pool_name;
+      cmd_getval(cmdmap, "pool", pool_name);
 
-    int64_t poolid = osdmap.lookup_pg_pool_name(pool_name);
-    if (poolid < 0) {
-      ceph_assert(poolid == -ENOENT);
-      ss << "unrecognized pool '" << pool_name << "'";
-      r = -ENOENT;
-      goto reply;
-    }
-    const pg_pool_t *p = osdmap.get_pg_pool(poolid);
-    const pool_stat_t* pstat = mon->mgrstatmon()->get_pool_stat(poolid);
-    if (!pstat) {
-      ss << "no stats for pool '" << pool_name << "'";
-      r = -ENOENT;
-      goto reply;
-    }
-    const object_stat_sum_t& sum = pstat->stats.sum;
-    if (f) {
-      f->open_object_section("pool_quotas");
-      f->dump_string("pool_name", pool_name);
-      f->dump_unsigned("pool_id", poolid);
-      f->dump_unsigned("quota_max_objects", p->quota_max_objects);
-      f->dump_int("current_num_objects", sum.num_objects);
-      f->dump_unsigned("quota_max_bytes", p->quota_max_bytes);
-      f->dump_int("current_num_bytes", sum.num_bytes);
-      f->close_section();
-      f->flush(rdata);
-    } else {
-      stringstream rs;
-      rs << "quotas for pool '" << pool_name << "':\n"
-         << "  max objects: ";
-      if (p->quota_max_objects == 0)
-        rs << "N/A";
-      else {
-        rs << si_u_t(p->quota_max_objects) << " objects";
-        rs << "  (current num objects: " << sum.num_objects << " objects)";
+      int64_t poolid = osdmap.lookup_pg_pool_name(pool_name);
+      if (poolid < 0) {
+        ceph_assert(poolid == -ENOENT);
+        ss << "unrecognized pool '" << pool_name << "'";
+        r = -ENOENT;
+        goto reply;
       }
-      rs << "\n"
-         << "  max bytes  : ";
-      if (p->quota_max_bytes == 0)
-        rs << "N/A";
-      else {
-        rs << byte_u_t(p->quota_max_bytes);
-        rs << "  (current num bytes: " << sum.num_bytes << " bytes)";
+      const pg_pool_t *p = osdmap.get_pg_pool(poolid);
+      const pool_stat_t* pstat = mon->mgrstatmon()->get_pool_stat(poolid);
+      if (!pstat) {
+        ss << "no stats for pool '" << pool_name << "'";
+        r = -ENOENT;
+        goto reply;
       }
-      rdata.append(rs.str());
-    }
-    rdata.append("\n");
-    r = 0;
-  } else if (prefix == "osd crush rule list" ||
-	     prefix == "osd crush rule ls") {
+      const object_stat_sum_t& sum = pstat->stats.sum;
+      if (f) {
+        f->open_object_section("pool_quotas");
+        f->dump_string("pool_name", pool_name);
+        f->dump_unsigned("pool_id", poolid);
+        f->dump_unsigned("quota_max_objects", p->quota_max_objects);
+        f->dump_int("current_num_objects", sum.num_objects);
+        f->dump_unsigned("quota_max_bytes", p->quota_max_bytes);
+        f->dump_int("current_num_bytes", sum.num_bytes);
+        f->close_section();
+        f->flush(rdata);
+      } else {
+        stringstream rs;
+        rs << "quotas for pool '" << pool_name << "':\n"
+          << "  max objects: ";
+        if (p->quota_max_objects == 0)
+          rs << "N/A";
+        else {
+          rs << si_u_t(p->quota_max_objects) << " objects";
+          rs << "  (current num objects: " << sum.num_objects << " objects)";
+        }
+        rs << "\n"
+          << "  max bytes  : ";
+        if (p->quota_max_bytes == 0)
+          rs << "N/A";
+        else {
+          rs << byte_u_t(p->quota_max_bytes);
+          rs << "  (current num bytes: " << sum.num_bytes << " bytes)";
+        }
+        rdata.append(rs.str());
+      }
+      rdata.append("\n");
+      r = 0;
+    } else if (prefix == "osd crush rule list" ||
+	    prefix == "osd crush rule ls") {
     if (f) {
       f->open_array_section("rules");
       osdmap.crush->list_rules(f.get());
@@ -6571,9 +6537,9 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     } else {
       int ruleno = osdmap.crush->get_rule_id(name);
       if (ruleno < 0) {
-	ss << "unknown crush rule '" << name << "'";
-	r = ruleno;
-	goto reply;
+	      ss << "unknown crush rule '" << name << "'";
+	      r = ruleno;
+	      goto reply;
       }
       osdmap.crush->dump_rule(ruleno, f.get());
     }
@@ -6643,20 +6609,20 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     } else {
       int num = osdmap.crush->get_bucket_size(id);
       for (int i = 0; i < num; ++i) {
-	result.push_back(osdmap.crush->get_bucket_item(id, i));
+	      result.push_back(osdmap.crush->get_bucket_item(id, i));
       }
     }
     if (f) {
       f->open_array_section("items");
       for (auto i : result) {
-	f->dump_string("item", osdmap.crush->get_item_name(i));
+	      f->dump_string("item", osdmap.crush->get_item_name(i));
       }
       f->close_section();
       f->flush(rdata);
     } else {
       ostringstream ss;
       for (auto i : result) {
-	ss << osdmap.crush->get_item_name(i) << "\n";
+	      ss << osdmap.crush->get_item_name(i) << "\n";
       }
       rdata.append(ss.str());
     }
@@ -6723,9 +6689,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
         ds << class_by_osd.begin()->second;
       } else {
         // note that we do not group osds by class here
-        for (auto it = class_by_osd.begin();
-             it != class_by_osd.end();
-             it++) {
+        for (auto it = class_by_osd.begin(); it != class_by_osd.end(); it++) {
           ds << "osd." << it->first << ' ' << it->second;
           if (next(it) != class_by_osd.end())
             ds << '\n';
@@ -6741,7 +6705,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       if (f)
         f->dump_string("profile", i->first.c_str());
       else
-	rdata.append(i->first + "\n");
+	      rdata.append(i->first + "\n");
     }
     if (f) {
       f->close_section();
@@ -6755,30 +6719,29 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     if (f) {
       f->open_array_section("weight_sets");
       if (osdmap.crush->have_choose_args(CrushWrapper::DEFAULT_CHOOSE_ARGS)) {
-	f->dump_string("pool", "(compat)");
+	      f->dump_string("pool", "(compat)");
       }
       for (auto& i : osdmap.crush->choose_args) {
-	if (i.first >= 0) {
-	  f->dump_string("pool", osdmap.get_pool_name(i.first));
-	}
+	      if (i.first >= 0) {
+	        f->dump_string("pool", osdmap.get_pool_name(i.first));
+	      }
       }
       f->close_section();
       f->flush(rdata);
     } else {
       ostringstream rs;
       if (osdmap.crush->have_choose_args(CrushWrapper::DEFAULT_CHOOSE_ARGS)) {
-	rs << "(compat)\n";
+	      rs << "(compat)\n";
       }
       for (auto& i : osdmap.crush->choose_args) {
-	if (i.first >= 0) {
-	  rs << osdmap.get_pool_name(i.first) << "\n";
-	}
+	      if (i.first >= 0) {
+	        rs << osdmap.get_pool_name(i.first) << "\n";
+	      }
       }
       rdata.append(rs.str());
     }
   } else if (prefix == "osd crush weight-set dump") {
-    boost::scoped_ptr<Formatter> f(Formatter::create(format, "json-pretty",
-						     "json-pretty"));
+    boost::scoped_ptr<Formatter> f(Formatter::create(format, "json-pretty", "json-pretty"));
     osdmap.crush->dump_choose_args(f.get());
     f->flush(rdata);
   } else if (prefix == "osd erasure-code-profile get") {
@@ -6792,13 +6755,11 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     const map<string,string> &profile = osdmap.get_erasure_code_profile(name);
     if (f)
       f->open_object_section("profile");
-    for (map<string,string>::const_iterator i = profile.begin();
-	 i != profile.end();
-	 ++i) {
+    for (map<string,string>::const_iterator i = profile.begin(); i != profile.end(); ++i) {
       if (f)
         f->dump_string(i->first.c_str(), i->second.c_str());
       else
-	rdata.append(i->first + "=" + i->second + "\n");
+	      rdata.append(i->first + "=" + i->second + "\n");
     }
     if (f) {
       f->close_section();
@@ -6808,8 +6769,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
       rdata.append(rs.str());
     }
   } else if (prefix == "osd pool application get") {
-    boost::scoped_ptr<Formatter> f(Formatter::create(format, "json-pretty",
-                                                     "json-pretty"));
+    boost::scoped_ptr<Formatter> f(Formatter::create(format, "json-pretty", "json-pretty"));
     string pool_name;
     cmd_getval(cmdmap, "pool", pool_name);
     string app;
@@ -6914,7 +6874,7 @@ bool OSDMonitor::preprocess_command(MonOpRequestRef op)
     return false;
   }
 
- reply:
+  reply:
   string rs;
   getline(ss, rs);
   mon->reply_command(op, r, rs, rdata, get_last_committed());
