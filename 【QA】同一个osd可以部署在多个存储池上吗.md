@@ -30,7 +30,15 @@ pool2 81.0e    pg  {2,5,11}
 可以看到同一个osd.11上包含两个pool池的pg，而不是唯一的，QA 哪里来保存不同pool的pgmap？这张pgmap在osd实例上是否也会看到？    
     
 ## 3.ceph创池流程  
+流程函数如下:  
+```sh
+客户端命令执行ceph osd pool create pool pgnum pgpnum
+|void Monitor::handle_command(MonOpRequestRef op)
+  |osdmon()->dispatch(op); #osd相关
+    |bool ConfigMonitor::preprocess_query(MonOpRequestRef op) #判断是否是MSG_MON_COMMAND命令
+      |bool OSDMonitor::preprocess_command(MonOpRequestRef op) #mon解析创建请求
 
+```  
 
 
 
