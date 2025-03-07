@@ -1562,12 +1562,13 @@ MonitorDBStore::TransactionRef Paxos::get_pending_transaction()
   return pending_proposal;
 }
 
+//触发提议的表决
 bool Paxos::trigger_propose()
 {
   if (plugged) {
     dout(10) << __func__ << " plugged, not proposing now" << dendl;
     return false;
-  } else if (is_active()) {
+  } else if (is_active()) {  //正常是active的，所以走进来
     dout(10) << __func__ << " active, proposing now" << dendl;
     propose_pending();
     return true;

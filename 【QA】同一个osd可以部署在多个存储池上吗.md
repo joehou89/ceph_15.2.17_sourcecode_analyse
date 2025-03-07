@@ -43,19 +43,19 @@ pool2 81.0e    pg  {2,5,11}
   |          |create pool 逻辑
   |            |int OSDMonitor::prepare_new_pool(MonOpRequestRef op)
   |              |int OSDMonitor::prepare_new_pool(string& name,
-  |				        |int crush_rule,
-  |				        |const string &crush_rule_name,
+  |				       |int crush_rule,
+  |				       |const string &crush_rule_name,
   |              |                 unsigned pg_num, unsigned pgp_num,
-  |				        |unsigned pg_num_min,
+  |				       |unsigned pg_num_min,
   |              |                 const uint64_t repl_size,
-  |				        |const uint64_t target_size_bytes,
-  |				        |const float target_size_ratio,
-  |				        |const string &erasure_code_profile,
+  |				       |const uint64_t target_size_bytes,
+  |				       |const float target_size_ratio,
+  |				       |const string &erasure_code_profile,
   |              |                 const unsigned pool_type,
   |              |                 const uint64_t expected_num_objects,
   |              |                 FastReadType fast_read,
-  |				        |const string& pg_autoscale_mode,
-  |				        |ostream *ss)
+  |				       |const string& pg_autoscale_mode,
+  |				       |ostream *ss)
   |                |prepare_pool_crush_rule
   |                |_get_pending_crush
   |                |prepare_pool_size
@@ -65,19 +65,58 @@ pool2 81.0e    pg  {2,5,11}
   |
   |void PaxosService::propose_pending()
     |bool Paxos::trigger_propose()  //触发提议的表决
-
-
+      |void Paxos::propose_pending()
+        |void Paxos::begin(bufferlist& v); //开始执行
+          |(1)编码写本地db持久化
+          |(2)发送给其他mon节点同步提议
+      |void Monitor::refresh_from_paxos(bool *need_bootstrap) //进行提议的推行
 ```    
 整个流程做了两件事:  
 (1)创池pool动作，其中包含创pool所需的参数，这些参数是通过入参传进来，针对副本池或ec池进行区分;  
 (2)通过paxos::propose_pending 接口提交事务到paxos协议，通过paxos协议将更新后的osdmap同步给其他mon节点;  
     
-具体的osd实例如何感知到osdmap是否发生了变化？  
-mon主动推送:此时mon集群已经同步完了最新的osdmap，此时mon集群会周期发送消息给osd;    
-osd周期拉取  
-当osd获取到最新的osdmap后，会触发创建pg流程  
+## 4.ceph创建pg流程  
+其他mon节点收到paxis提议消息后进行解析
+```c  
+
+void Monitor::_ms_dispatch(Message *m) //接收来自其他mon节点的提议消息,这里就是他自己
+  |void Monitor::dispatch_op(MonOpRequestRef op)
+    |case MSG_OSD_PG_CREATED: //针对pg create
+      |void Paxos::dispatch(MonOpRequestRef op)
+        |case MMonPaxos::OP_ACCEPT:
+          handle_accept(op);
+          |void Paxos::handle_accept(MonOpRequestRef op)
+            |void Paxos::commit_start(); //提交开始   所以ceph paxos是2PC
+              |get_store()->queue_transaction(t, new C_Committed(this)); //本地持久化写blstore
+```  
+当paxos提议提交完成后会执行如下回调操作：  
+```c  
+void Paxos::commit_finish()
+  |mon->send_mon_message(commit, *p); // 构造paxos消息通知其他monmap的mon节点，本op本地已提交
+  |bool Paxos::do_refresh()
+    |void Monitor::refresh_from_paxos(bool *need_bootstrap)
+      |void PaxosService::refresh(bool *need_bootstrap)
+        |void OSDMonitor::update_from_paxos(bool *need_bootstrap)
+          |void OSDMonitor::check_pg_creates_subs()
+            |void OSDMonitor::check_pg_creates_sub(Subscription *sub)
+              |epoch_t OSDMonitor::send_pg_creates(int osd, Connection *con, epoch_t next) const
+```  
+  
+osd实例开始接收到mon发动过来的创建pg的消息
+```c  
+bool OSD::ms_dispatch(Message *m)
+  |void OSD::_dispatch(Message *m)
+    | case MSG_OSD_PG_CREATE:
+      void OSD::dispatch_op(OpRequestRef op)
+      |case MSG_OSD_PG_CREATE:
+        handle_pg_create(op);
+
+```  
 
 
+
+## 参考链接  
+https://blog.51cto.com/wendashuai/2512359  
 
 
 

@@ -4787,10 +4787,10 @@ void OSDMonitor::check_pg_creates_subs()
   mon->with_session_map([this](const MonSessionMap& session_map) {
       auto pg_creates_subs = session_map.subs.find("osd_pg_creates");
       if (pg_creates_subs == session_map.subs.end()) {
-	return;
+	      return;
       }
       for (auto sub : *pg_creates_subs->second) {
-	check_pg_creates_sub(sub);
+	      check_pg_creates_sub(sub);
       }
     });
 }

@@ -7210,9 +7210,9 @@ void OSD::_dispatch(Message *m)
       // no map?  starting up?
       if (!get_osdmap()) {
         dout(7) << "no OSDMap, not booted" << dendl;
-	logger->inc(l_osd_waiting_for_map);
+	      logger->inc(l_osd_waiting_for_map);
         waiting_for_osdmap.push_back(op);
-	op->mark_delayed("no osdmap");
+	      op->mark_delayed("no osdmap");
         break;
       }
 
@@ -9077,7 +9077,7 @@ void OSD::handle_pg_create(OpRequestRef op)
     osdmap->pg_to_up_acting_osds(on, &up, &up_primary, &acting, &acting_primary);
     int role = osdmap->calc_pg_role(pg_shard_t(whoami, pgid.shard), acting);
 
-    if (acting_primary != whoami) {
+    if (acting_primary != whoami) {  //确保只在主osd上创建pg
       dout(10) << "mkpg " << on << "  not acting_primary (" << acting_primary
 	       << "), my role=" << role << ", skipping" << dendl;
       continue;
