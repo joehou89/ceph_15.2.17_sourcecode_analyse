@@ -35,33 +35,37 @@ pool2 81.0e    pg  {2,5,11}
 客户端命令执行ceph osd pool create pool pgnum pgpnum
 |void Monitor::handle_command(MonOpRequestRef op)
   |osdmon()->dispatch(op); #osd相关
-    |PaxosService::dispatch(MonOpRequestRef op)
-      |bool OSDMonitor::preprocess_query(MonOpRequestRef op)
-      |bool OSDMonitor::prepare_update(MonOpRequestRef op)
-        |bool OSDMonitor::prepare_command(MonOpRequestRef op)
-          |bool OSDMonitor::prepare_command_impl(MonOpRequestRef op, const cmdmap_t& cmdmap)
-            |create pool 逻辑
-              |int OSDMonitor::prepare_new_pool(MonOpRequestRef op)
-                |int OSDMonitor::prepare_new_pool(string& name,
-				        |int crush_rule,
-				        |const string &crush_rule_name,
-                |                 unsigned pg_num, unsigned pgp_num,
-				        |unsigned pg_num_min,
-                |                 const uint64_t repl_size,
-				        |const uint64_t target_size_bytes,
-				        |const float target_size_ratio,
-				        |const string &erasure_code_profile,
-                |                 const unsigned pool_type,
-                |                 const uint64_t expected_num_objects,
-                |                 FastReadType fast_read,
-				        |const string& pg_autoscale_mode,
-				        |ostream *ss)
-                  |prepare_pool_crush_rule
-                  |_get_pending_crush
-                  |prepare_pool_size
-                  |check_pg_num
-                  |check_crush_rule
-                  |prepare_pool_stripe_width
+  |  |PaxosService::dispatch(MonOpRequestRef op)
+  |    |bool OSDMonitor::preprocess_query(MonOpRequestRef op)
+  |    |bool OSDMonitor::prepare_update(MonOpRequestRef op)
+  |      |bool OSDMonitor::prepare_command(MonOpRequestRef op)
+  |        |bool OSDMonitor::prepare_command_impl(MonOpRequestRef op, const cmdmap_t& cmdmap)
+  |          |create pool 逻辑
+  |            |int OSDMonitor::prepare_new_pool(MonOpRequestRef op)
+  |              |int OSDMonitor::prepare_new_pool(string& name,
+  |				        |int crush_rule,
+  |				        |const string &crush_rule_name,
+  |              |                 unsigned pg_num, unsigned pgp_num,
+  |				        |unsigned pg_num_min,
+  |              |                 const uint64_t repl_size,
+  |				        |const uint64_t target_size_bytes,
+  |				        |const float target_size_ratio,
+  |				        |const string &erasure_code_profile,
+  |              |                 const unsigned pool_type,
+  |              |                 const uint64_t expected_num_objects,
+  |              |                 FastReadType fast_read,
+  |				        |const string& pg_autoscale_mode,
+  |				        |ostream *ss)
+  |                |prepare_pool_crush_rule
+  |                |_get_pending_crush
+  |                |prepare_pool_size
+  |                |check_pg_num
+  |                |check_crush_rule
+  |                |prepare_pool_stripe_width
+  |
+  |void PaxosService::propose_pending()
+    |bool Paxos::trigger_propose()  //触发提议的表决
+
 
 ```    
 整个流程做了两件事:  
