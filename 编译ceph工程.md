@@ -1,4 +1,6 @@
-链接: http://strugglesquirrel.com/2019/01/03/手动编译ceph/  #来源:奋斗松鼠    
+链接:  
+http://strugglesquirrel.com/2019/01/03/手动编译ceph/  #来源:奋斗松鼠    
+https://www.jianshu.com/p/f64320d9093e  #简书  
     
 我的虚拟机内核版本:  
 Linux localhost.localdomain 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux  
