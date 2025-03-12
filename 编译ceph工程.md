@@ -1,7 +1,8 @@
 链接:  
 http://strugglesquirrel.com/2019/01/03/手动编译ceph/  #来源:奋斗松鼠    
 https://www.jianshu.com/p/f64320d9093e  #简书  
-    
+https://docs.ceph.com/en/nautilus/install/build-ceph/  
+      
 我的虚拟机内核版本:  
 Linux localhost.localdomain 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux  
 编译过程中还是需要了一些问题，我相信链接文章里的编译过程也远没有像写的那样傻瓜式一站到底。  
