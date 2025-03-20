@@ -11913,111 +11913,104 @@ void BlueStore::_txc_update_store_statfs(TransContext *txc)
 
 void BlueStore::_txc_state_proc(TransContext *txc)
 {
+  /*
+  TODO: 这是一个while死循环
+  */
   while (true) {
-    dout(10) << __func__ << " txc " << txc
-	     << " " << txc->get_state_name() << dendl;
+    dout(10) << __func__ << " txc " << txc << " " << txc->get_state_name() << dendl;
     switch (txc->state) {
-    case TransContext::STATE_PREPARE:
-      throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
-      if (txc->ioc.has_pending_aios()) {
-	txc->state = TransContext::STATE_AIO_WAIT;
-	txc->had_ios = true;
-	_txc_aio_submit(txc);
-	return;
-      }
-      // ** fall-thru **
+      case TransContext::STATE_PREPARE:
+        throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
+        if (txc->ioc.has_pending_aios()) {
+	        txc->state = TransContext::STATE_AIO_WAIT;
+	        txc->had_ios = true;
+ 	        _txc_aio_submit(txc);
+	        return;
+        }
+        // ** fall-thru **
 
-    case TransContext::STATE_AIO_WAIT:
+      case TransContext::STATE_AIO_WAIT:
       {
-	mono_clock::duration lat = throttle.log_state_latency(
-	  *txc, logger, l_bluestore_state_aio_wait_lat);
-	if (ceph::to_seconds<double>(lat) >= cct->_conf->bluestore_log_op_age) {
-	  dout(0) << __func__ << " slow aio_wait, txc = " << txc
-		  << ", latency = " << lat
-		  << dendl;
-	}
+	      mono_clock::duration lat = throttle.log_state_latency(
+	      *txc, logger, l_bluestore_state_aio_wait_lat);
+	      if (ceph::to_seconds<double>(lat) >= cct->_conf->bluestore_log_op_age) {
+	        dout(0) << __func__ << " slow aio_wait, txc = " << txc << ", latency = " << lat << dendl;
+	      }
       }
 
       _txc_finish_io(txc);  // may trigger blocked txc's too
       return;
 
-    case TransContext::STATE_IO_DONE:
-      ceph_assert(ceph_mutex_is_locked(txc->osr->qlock));  // see _txc_finish_io
-      if (txc->had_ios) {
-	++txc->osr->txc_with_unstable_io;
-      }
-      throttle.log_state_latency(*txc, logger, l_bluestore_state_io_done_lat);
-      txc->state = TransContext::STATE_KV_QUEUED;
-      if (cct->_conf->bluestore_sync_submit_transaction) {
-	if (txc->last_nid >= nid_max ||
-	    txc->last_blobid >= blobid_max) {
-	  dout(20) << __func__
-		   << " last_{nid,blobid} exceeds max, submit via kv thread"
-		   << dendl;
-	} else if (txc->osr->kv_committing_serially) {
-	  dout(20) << __func__ << " prior txc submitted via kv thread, us too"
-		   << dendl;
-	  // note: this is starvation-prone.  once we have a txc in a busy
-	  // sequencer that is committing serially it is possible to keep
-	  // submitting new transactions fast enough that we get stuck doing
-	  // so.  the alternative is to block here... fixme?
-	} else if (txc->osr->txc_with_unstable_io) {
-	  dout(20) << __func__ << " prior txc(s) with unstable ios "
-		   << txc->osr->txc_with_unstable_io.load() << dendl;
-	} else if (cct->_conf->bluestore_debug_randomize_serial_transaction &&
-		   rand() % cct->_conf->bluestore_debug_randomize_serial_transaction
-		   == 0) {
-	  dout(20) << __func__ << " DEBUG randomly forcing submit via kv thread"
-		   << dendl;
-	} else {
-	  _txc_apply_kv(txc, true);
-	}
-      }
-      {
-	std::lock_guard l(kv_lock);
-	kv_queue.push_back(txc);
-	if (!kv_sync_in_progress) {
-	  kv_sync_in_progress = true;
-	  kv_cond.notify_one();
-	}
-	if (txc->state != TransContext::STATE_KV_SUBMITTED) {
-	  kv_queue_unsubmitted.push_back(txc);
-	  ++txc->osr->kv_committing_serially;
-	}
-	if (txc->had_ios)
-	  kv_ios++;
-	kv_throttle_costs += txc->cost;
-      }
-      return;
-    case TransContext::STATE_KV_SUBMITTED:
-      _txc_committed_kv(txc);
-      // ** fall-thru **
+      case TransContext::STATE_IO_DONE:
+        ceph_assert(ceph_mutex_is_locked(txc->osr->qlock));  // see _txc_finish_io
+        if (txc->had_ios) {
+	        ++txc->osr->txc_with_unstable_io;
+        }
+        throttle.log_state_latency(*txc, logger, l_bluestore_state_io_done_lat);
+        txc->state = TransContext::STATE_KV_QUEUED;
+        if (cct->_conf->bluestore_sync_submit_transaction) {
+	        if (txc->last_nid >= nid_max ||
+	          txc->last_blobid >= blobid_max) {
+	          dout(20) << __func__ << " last_{nid,blobid} exceeds max, submit via kv thread" << dendl;
+	        } else if (txc->osr->kv_committing_serially) {
+	          dout(20) << __func__ << " prior txc submitted via kv thread, us too" << dendl;
+	          // note: this is starvation-prone.  once we have a txc in a busy
+	          // sequencer that is committing serially it is possible to keep
+	          // submitting new transactions fast enough that we get stuck doing
+	          // so.  the alternative is to block here... fixme?
+	        } else if (txc->osr->txc_with_unstable_io) {
+	          dout(20) << __func__ << " prior txc(s) with unstable ios " << txc->osr->txc_with_unstable_io.load() << dendl;
+	        } else if (cct->_conf->bluestore_debug_randomize_serial_transaction && rand() % cct->_conf->bluestore_debug_randomize_serial_transaction == 0) {
+	          dout(20) << __func__ << " DEBUG randomly forcing submit via kv thread" << dendl;
+	        } else {
+	          _txc_apply_kv(txc, true);
+	        }
+        }
+        {
+          std::lock_guard l(kv_lock);
+          kv_queue.push_back(txc);
+          if (!kv_sync_in_progress) {
+            kv_sync_in_progress = true;
+            kv_cond.notify_one();
+          }
+          if (txc->state != TransContext::STATE_KV_SUBMITTED) {
+            kv_queue_unsubmitted.push_back(txc);
+            ++txc->osr->kv_committing_serially;
+          }
+          if (txc->had_ios)
+            kv_ios++;
+          kv_throttle_costs += txc->cost;
+        }
+        return;
 
-    case TransContext::STATE_KV_DONE:
-      throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
-      if (txc->deferred_txn) {
-	txc->state = TransContext::STATE_DEFERRED_QUEUED;
-	_deferred_queue(txc);
-	return;
-      }
-      txc->state = TransContext::STATE_FINISHING;
-      break;
+      case TransContext::STATE_KV_SUBMITTED:
+        _txc_committed_kv(txc);
+        // ** fall-thru **
 
-    case TransContext::STATE_DEFERRED_CLEANUP:
-      throttle.log_state_latency(*txc, logger, l_bluestore_state_deferred_cleanup_lat);
-      txc->state = TransContext::STATE_FINISHING;
-      // ** fall-thru **
+      case TransContext::STATE_KV_DONE:
+        throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
+        if (txc->deferred_txn) {
+          txc->state = TransContext::STATE_DEFERRED_QUEUED;
+          _deferred_queue(txc);
+          return;
+        }
+        txc->state = TransContext::STATE_FINISHING;
+        break;
 
-    case TransContext::STATE_FINISHING:
-      throttle.log_state_latency(*txc, logger, l_bluestore_state_finishing_lat);
-      _txc_finish(txc);
-      return;
+      case TransContext::STATE_DEFERRED_CLEANUP:
+        throttle.log_state_latency(*txc, logger, l_bluestore_state_deferred_cleanup_lat);
+        txc->state = TransContext::STATE_FINISHING;
+        // ** fall-thru **
 
-    default:
-      derr << __func__ << " unexpected txc " << txc
-	   << " state " << txc->get_state_name() << dendl;
-      ceph_abort_msg("unexpected txc state");
-      return;
+      case TransContext::STATE_FINISHING:
+        throttle.log_state_latency(*txc, logger, l_bluestore_state_finishing_lat);
+        _txc_finish(txc);
+        return;
+
+      default:
+        derr << __func__ << " unexpected txc " << txc << " state " << txc->get_state_name() << dendl;
+        ceph_abort_msg("unexpected txc state");
+        return;
     }
   }
 }
@@ -13144,14 +13137,18 @@ int BlueStore::queue_transactions(
 
   auto start = mono_clock::now();
 
+  //c应该是store层的gc实例
   Collection *c = static_cast<Collection*>(ch.get());
   OpSequencer *osr = c->osr.get();
   dout(10) << __func__ << " ch " << c << " " << c->cid << dendl;
 
   // prepare
+  //创建一个store层的事务
   TransContext *txc = _txc_create(static_cast<Collection*>(ch.get()), osr,
 				  &on_commit);
 
+  //我们假设osd层传下来的事务只有1个
+  //TODO:这个函数应该是store层的核心处理入口
   for (vector<Transaction>::iterator p = tls.begin(); p != tls.end(); ++p) {
     txc->bytes += (*p).get_num_bytes();
     _txc_add_transaction(txc, &(*p));
@@ -13176,26 +13173,26 @@ int BlueStore::queue_transactions(
 
   auto tstart = mono_clock::now();
 
-  if (!throttle.try_start_transaction(
-	*db,
-	*txc,
-	tstart)) {
+  /*
+  TODO: 这段代码的作用就是反压，可以看到store层事务的处理也是串行处理，如果上一个事务处理完成后，这里就要唤醒条件变量
+  */
+  if (!throttle.try_start_transaction(*db, *txc, tstart)) {
     // ensure we do not block here because of deferred writes
-    dout(10) << __func__ << " failed get throttle_deferred_bytes, aggressive"
-	     << dendl;
+    dout(10) << __func__ << " failed get throttle_deferred_bytes, aggressive" << dendl;
     ++deferred_aggressive;
     deferred_try_submit();
     {
       // wake up any previously finished deferred events
       std::lock_guard l(kv_lock);
       if (!kv_sync_in_progress) {
-	kv_sync_in_progress = true;
-	kv_cond.notify_one();
+        kv_sync_in_progress = true;
+	      kv_cond.notify_one();
       }
     }
     throttle.finish_start_transaction(*db, *txc, tstart);
     --deferred_aggressive;
   }
+
   auto tend = mono_clock::now();
 
   if (handle)
@@ -13271,50 +13268,53 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
       txc->osd_pool_id = pgid.pool();
     }
 
+    /*
+    TODO: 这个switch是针对事务op的操作，没有看懂和真正的io有什么关系
+    */
     switch (op->op) {
-    case Transaction::OP_RMCOLL:
+      case Transaction::OP_RMCOLL:
       {
         const coll_t &cid = i.get_cid(op->cid);
-	r = _remove_collection(txc, cid, &c);
-	if (!r)
-	  continue;
+        r = _remove_collection(txc, cid, &c);
+        if (!r)
+          continue;
       }
       break;
 
-    case Transaction::OP_MKCOLL:
+      case Transaction::OP_MKCOLL:
       {
-	ceph_assert(!c);
-	const coll_t &cid = i.get_cid(op->cid);
-	r = _create_collection(txc, cid, op->split_bits, &c);
-	if (!r)
-	  continue;
+        ceph_assert(!c);
+        const coll_t &cid = i.get_cid(op->cid);
+        r = _create_collection(txc, cid, op->split_bits, &c);
+        if (!r)
+          continue;
       }
       break;
 
-    case Transaction::OP_SPLIT_COLLECTION:
-      ceph_abort_msg("deprecated");
-      break;
+      case Transaction::OP_SPLIT_COLLECTION:
+        ceph_abort_msg("deprecated");
+        break;
 
-    case Transaction::OP_SPLIT_COLLECTION2:
+      case Transaction::OP_SPLIT_COLLECTION2:
       {
         uint32_t bits = op->split_bits;
         uint32_t rem = op->split_rem;
-	r = _split_collection(txc, c, cvec[op->dest_cid], bits, rem);
-	if (!r)
-	  continue;
+        r = _split_collection(txc, c, cvec[op->dest_cid], bits, rem);
+        if (!r)
+          continue;
       }
       break;
 
-    case Transaction::OP_MERGE_COLLECTION:
+      case Transaction::OP_MERGE_COLLECTION:
       {
         uint32_t bits = op->split_bits;
-	r = _merge_collection(txc, &c, cvec[op->dest_cid], bits);
-	if (!r)
-	  continue;
+        r = _merge_collection(txc, &c, cvec[op->dest_cid], bits);
+        if (!r)
+          continue;
       }
       break;
 
-    case Transaction::OP_COLL_HINT:
+      case Transaction::OP_COLL_HINT:
       {
         uint32_t type = op->hint_type;
         bufferlist hint;
@@ -13325,28 +13325,26 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
           uint64_t num_objs;
           decode(pg_num, hiter);
           decode(num_objs, hiter);
-          dout(10) << __func__ << " collection hint objects is a no-op, "
-		   << " pg_num " << pg_num << " num_objects " << num_objs
-		   << dendl;
-        } else {
-          // Ignore the hint
-          dout(10) << __func__ << " unknown collection hint " << type << dendl;
-        }
-	continue;
+          dout(10) << __func__ << " collection hint objects is a no-op, " << " pg_num " << pg_num << " num_objects " << num_objs << dendl;
+          } else {
+            // Ignore the hint
+            dout(10) << __func__ << " unknown collection hint " << type << dendl;
+          }
+        continue;
       }
       break;
 
-    case Transaction::OP_COLL_SETATTR:
-      r = -EOPNOTSUPP;
+      case Transaction::OP_COLL_SETATTR:
+        r = -EOPNOTSUPP;
       break;
 
-    case Transaction::OP_COLL_RMATTR:
-      r = -EOPNOTSUPP;
+      case Transaction::OP_COLL_RMATTR:
+        r = -EOPNOTSUPP;
       break;
 
-    case Transaction::OP_COLL_RENAME:
-      ceph_abort_msg("not implemented");
-      break;
+      case Transaction::OP_COLL_RENAME:
+        ceph_abort_msg("not implemented");
+        break;
     }
     if (r < 0) {
       derr << __func__ << " error " << cpp_strerror(r)
@@ -13357,203 +13355,214 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
     }
 
     // these operations implicity create the object
+    /*
+    TODO:如果事务操作是以下几种类型，则置create为true
+    */
     bool create = false;
-    if (op->op == Transaction::OP_TOUCH ||
-	op->op == Transaction::OP_CREATE ||
-	op->op == Transaction::OP_WRITE ||
-	op->op == Transaction::OP_ZERO) {
+    if (op->op == Transaction::OP_TOUCH || op->op == Transaction::OP_CREATE ||
+	    op->op == Transaction::OP_WRITE ||
+	    op->op == Transaction::OP_ZERO) {
       create = true;
     }
 
     // object operations
+    /*
+    TODO: 这里加了一把独占锁，事务操作是排他的
+    */
     std::unique_lock l(c->lock);
     OnodeRef &o = ovec[op->oid];
     if (!o) {
       ghobject_t oid = i.get_oid(op->oid);
       o = c->get_onode(oid, create, op->op == Transaction::OP_CREATE);
     }
-    if (!create && (!o || !o->exists)) {
+    if (!create && (!o || !o->exists)) {     //异常判断，如果满足条件，则直接goto到endop，不再写盘了，直接返回
       dout(10) << __func__ << " op " << op->op << " got ENOENT on "
 	       << i.get_oid(op->oid) << dendl;
       r = -ENOENT;
       goto endop;
     }
 
+    //针对op类型进行判断
     switch (op->op) {
-    case Transaction::OP_CREATE:
-    case Transaction::OP_TOUCH:
-      r = _touch(txc, c, o);
-      break;
+      case Transaction::OP_CREATE:
+      case Transaction::OP_TOUCH:
+        r = _touch(txc, c, o);
+        break;
 
-    case Transaction::OP_WRITE:
+      //针对读写操作
+      case Transaction::OP_WRITE:
       {
-        uint64_t off = op->off;
-        uint64_t len = op->len;
-	uint32_t fadvise_flags = i.get_fadvise_flags();
+        uint64_t off = op->off;                                 //op写偏移
+        uint64_t len = op->len;                                 //op写长度
+	      uint32_t fadvise_flags = i.get_fadvise_flags();         //应该是一个标记
         bufferlist bl;
         i.decode_bl(bl);
-	r = _write(txc, c, o, off, len, bl, fadvise_flags);
+	      r = _write(txc, c, o, off, len, bl, fadvise_flags);     //store写盘的主入口
       }
       break;
 
-    case Transaction::OP_ZERO:
+      case Transaction::OP_ZERO:
       {
         uint64_t off = op->off;
         uint64_t len = op->len;
-	r = _zero(txc, c, o, off, len);
+	      r = _zero(txc, c, o, off, len);
       }
       break;
 
-    case Transaction::OP_TRIMCACHE:
+      case Transaction::OP_TRIMCACHE:
       {
         // deprecated, no-op
       }
       break;
 
-    case Transaction::OP_TRUNCATE:
+      case Transaction::OP_TRUNCATE:
       {
         uint64_t off = op->off;
-	r = _truncate(txc, c, o, off);
+	      r = _truncate(txc, c, o, off);
       }
       break;
 
-    case Transaction::OP_REMOVE:
+      case Transaction::OP_REMOVE:
       {
-	r = _remove(txc, c, o);
+	      r = _remove(txc, c, o);
       }
       break;
 
-    case Transaction::OP_SETATTR:
+      case Transaction::OP_SETATTR:
       {
         string name = i.decode_string();
         bufferptr bp;
         i.decode_bp(bp);
-	r = _setattr(txc, c, o, name, bp);
+	      r = _setattr(txc, c, o, name, bp);
       }
       break;
 
-    case Transaction::OP_SETATTRS:
+      case Transaction::OP_SETATTRS:
       {
         map<string, bufferptr> aset;
         i.decode_attrset(aset);
-	r = _setattrs(txc, c, o, aset);
+	      r = _setattrs(txc, c, o, aset);
       }
       break;
 
-    case Transaction::OP_RMATTR:
+      case Transaction::OP_RMATTR:
       {
-	string name = i.decode_string();
-	r = _rmattr(txc, c, o, name);
+	      string name = i.decode_string();
+	      r = _rmattr(txc, c, o, name);
       }
       break;
 
-    case Transaction::OP_RMATTRS:
+      case Transaction::OP_RMATTRS:
       {
-	r = _rmattrs(txc, c, o);
+	      r = _rmattrs(txc, c, o);
       }
       break;
 
-    case Transaction::OP_CLONE:
+      case Transaction::OP_CLONE:
       {
-	OnodeRef& no = ovec[op->dest_oid];
-	if (!no) {
+	      OnodeRef& no = ovec[op->dest_oid];
+	      if (!no) {
           const ghobject_t& noid = i.get_oid(op->dest_oid);
-	  no = c->get_onode(noid, true);
-	}
-	r = _clone(txc, c, o, no);
+	        no = c->get_onode(noid, true);
+	      }
+	      r = _clone(txc, c, o, no);
       }
       break;
 
-    case Transaction::OP_CLONERANGE:
-      ceph_abort_msg("deprecated");
+      case Transaction::OP_CLONERANGE:
+        ceph_abort_msg("deprecated");
       break;
 
-    case Transaction::OP_CLONERANGE2:
+      case Transaction::OP_CLONERANGE2:
       {
-	OnodeRef& no = ovec[op->dest_oid];
-	if (!no) {
-	  const ghobject_t& noid = i.get_oid(op->dest_oid);
-	  no = c->get_onode(noid, true);
-	}
+	      OnodeRef& no = ovec[op->dest_oid];
+	      if (!no) {
+	        const ghobject_t& noid = i.get_oid(op->dest_oid);
+	        no = c->get_onode(noid, true);
+	      }
         uint64_t srcoff = op->off;
         uint64_t len = op->len;
         uint64_t dstoff = op->dest_off;
-	r = _clone_range(txc, c, o, no, srcoff, len, dstoff);
+	      r = _clone_range(txc, c, o, no, srcoff, len, dstoff);
       }
       break;
 
-    case Transaction::OP_COLL_ADD:
-      ceph_abort_msg("not implemented");
+      case Transaction::OP_COLL_ADD:
+        ceph_abort_msg("not implemented");
       break;
 
-    case Transaction::OP_COLL_REMOVE:
-      ceph_abort_msg("not implemented");
+      case Transaction::OP_COLL_REMOVE:
+        ceph_abort_msg("not implemented");
       break;
 
-    case Transaction::OP_COLL_MOVE:
-      ceph_abort_msg("deprecated");
+      case Transaction::OP_COLL_MOVE:
+        ceph_abort_msg("deprecated");
       break;
 
-    case Transaction::OP_COLL_MOVE_RENAME:
-    case Transaction::OP_TRY_RENAME:
+      case Transaction::OP_COLL_MOVE_RENAME:
+      case Transaction::OP_TRY_RENAME:
       {
-	ceph_assert(op->cid == op->dest_cid);
-	const ghobject_t& noid = i.get_oid(op->dest_oid);
-	OnodeRef& no = ovec[op->dest_oid];
-	if (!no) {
-	  no = c->get_onode(noid, false);
-	}
-	r = _rename(txc, c, o, no, noid);
+	      ceph_assert(op->cid == op->dest_cid);
+	      const ghobject_t& noid = i.get_oid(op->dest_oid);
+	      OnodeRef& no = ovec[op->dest_oid];
+	      if (!no) {
+	        no = c->get_onode(noid, false);
+	      }
+	      r = _rename(txc, c, o, no, noid);
       }
       break;
 
-    case Transaction::OP_OMAP_CLEAR:
+      case Transaction::OP_OMAP_CLEAR:
       {
-	r = _omap_clear(txc, c, o);
+	      r = _omap_clear(txc, c, o);
       }
       break;
-    case Transaction::OP_OMAP_SETKEYS:
+    
+      case Transaction::OP_OMAP_SETKEYS:
       {
-	bufferlist aset_bl;
+	      bufferlist aset_bl;
         i.decode_attrset_bl(&aset_bl);
-	r = _omap_setkeys(txc, c, o, aset_bl);
+	      r = _omap_setkeys(txc, c, o, aset_bl);
       }
       break;
-    case Transaction::OP_OMAP_RMKEYS:
+    
+      case Transaction::OP_OMAP_RMKEYS:
       {
-	bufferlist keys_bl;
+        bufferlist keys_bl;
         i.decode_keyset_bl(&keys_bl);
-	r = _omap_rmkeys(txc, c, o, keys_bl);
+        r = _omap_rmkeys(txc, c, o, keys_bl);
       }
       break;
-    case Transaction::OP_OMAP_RMKEYRANGE:
+      
+      case Transaction::OP_OMAP_RMKEYRANGE:
       {
         string first, last;
         first = i.decode_string();
         last = i.decode_string();
-	r = _omap_rmkey_range(txc, c, o, first, last);
+        r = _omap_rmkey_range(txc, c, o, first, last);
       }
       break;
-    case Transaction::OP_OMAP_SETHEADER:
+      
+      case Transaction::OP_OMAP_SETHEADER:
       {
         bufferlist bl;
         i.decode_bl(bl);
-	r = _omap_setheader(txc, c, o, bl);
+        r = _omap_setheader(txc, c, o, bl);
       }
       break;
 
-    case Transaction::OP_SETALLOCHINT:
+      case Transaction::OP_SETALLOCHINT:
       {
-	r = _set_alloc_hint(txc, c, o,
-			    op->expected_object_size,
-			    op->expected_write_size,
-			    op->alloc_hint_flags);
+        r = _set_alloc_hint(txc, c, o,
+        op->expected_object_size,
+        op->expected_write_size,
+        op->alloc_hint_flags);
       }
       break;
 
-    default:
-      derr << __func__ << " bad op " << op->op << dendl;
-      ceph_abort();
+      default:
+        derr << __func__ << " bad op " << op->op << dendl;
+        ceph_abort();
     }
 
   endop:
@@ -14752,14 +14761,8 @@ int BlueStore::_do_write(
   uint32_t fadvise_flags)
 {
   int r = 0;
-
-  dout(20) << __func__
-	   << " " << o->oid
-	   << " 0x" << std::hex << offset << "~" << length
-	   << " - have 0x" << o->onode.size
-	   << " (" << std::dec << o->onode.size << ")"
-	   << " bytes"
-	   << " fadvise_flags 0x" << std::hex << fadvise_flags << std::dec
+  dout(20) << __func__ << " " << o->oid << " 0x" << std::hex << offset << "~" << length << " - have 0x" << o->onode.size
+	   << " (" << std::dec << o->onode.size << ")" << " bytes" << " fadvise_flags 0x" << std::hex << fadvise_flags << std::dec
 	   << dendl;
   _dump_onode<30>(cct, *o);
 
@@ -14769,16 +14772,17 @@ int BlueStore::_do_write(
 
   uint64_t end = offset + length;
 
+  //定义一个store层的gc
   GarbageCollector gc(c->store->cct);
   int64_t benefit = 0;
   auto dirty_start = offset;
   auto dirty_end = end;
 
-  WriteContext wctx;
+  WriteContext wctx;//定义了一个写事务
   _choose_write_options(c, o, fadvise_flags, &wctx);
   o->extent_map.fault_range(db, offset, length);
-  _do_write_data(txc, c, o, offset, length, bl, &wctx);
-  r = _do_alloc_write(txc, c, o, &wctx);
+  _do_write_data(txc, c, o, offset, length, bl, &wctx);  //写io的核心场景,分为大写io和小写io，此时只是写内存，未真正落盘
+  r = _do_alloc_write(txc, c, o, &wctx);                 //写io的分配磁盘空间
   if (r < 0) {
     derr << __func__ << " _do_alloc_write failed with " << cpp_strerror(r)
 	 << dendl;
@@ -14840,9 +14844,7 @@ int BlueStore::_write(TransContext *txc,
 		      bufferlist& bl,
 		      uint32_t fadvise_flags)
 {
-  dout(15) << __func__ << " " << c->cid << " " << o->oid
-	   << " 0x" << std::hex << offset << "~" << length << std::dec
-	   << dendl;
+  dout(15) << __func__ << " " << c->cid << " " << o->oid << " 0x" << std::hex << offset << "~" << length << std::dec << dendl;
   int r = 0;
   if (offset + length >= OBJECT_MAX_SIZE) {
     r = -E2BIG;
