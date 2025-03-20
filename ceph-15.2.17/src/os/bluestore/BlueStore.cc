@@ -14174,7 +14174,7 @@ int BlueStore::_do_alloc_write(
 
   CompressorRef c;
   double crr = 0;
-  if (wctx->compress) {
+  if (wctx->compress) {  //TODO: 如果事务中有压缩特性，则进行处理
     c = select_option(
       "compression_algorithm",
       compressor,
@@ -14209,7 +14209,7 @@ int BlueStore::_do_alloc_write(
   }
 
   // checksum
-  int64_t csum = csum_type.load();
+  int64_t csum = csum_type.load();   //TODO:应该是从pool数据库读取checksum的类型
   csum = select_option(
     "csum_type",
     csum,
@@ -14302,9 +14302,9 @@ int BlueStore::_do_alloc_write(
     }
   }
   PExtentVector prealloc;
-  prealloc.reserve(2 * wctx->writes.size());;
+  prealloc.reserve(2 * wctx->writes.size());
   int64_t prealloc_left = 0;
-  prealloc_left = alloc->allocate(need, min_alloc_size, need, 0, &prealloc);
+  prealloc_left = alloc->allocate(need, min_alloc_size, need, 0, &prealloc);    //TODO: 预分配磁盘空间
   if (prealloc_left < 0 || prealloc_left < (int64_t)need) {
     derr << __func__ << " failed to allocate 0x" << std::hex << need
          << " allocated 0x " << (prealloc_left < 0 ? 0 : prealloc_left)
@@ -14850,8 +14850,8 @@ int BlueStore::_write(TransContext *txc,
     r = -E2BIG;
   } else {
     _assign_nid(txc, o);
-    r = _do_write(txc, c, o, offset, length, bl, fadvise_flags);
-    txc->write_onode(o);
+    r = _do_write(txc, c, o, offset, length, bl, fadvise_flags);   //写数据
+    txc->write_onode(o);                                           //更新元数据
   }
   dout(10) << __func__ << " " << c->cid << " " << o->oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec
@@ -15524,13 +15524,13 @@ int BlueStore::_clone_range(TransContext *txc,
       r = _do_read(c.get(), oldo, srcoff, length, bl, 0);
       if (r < 0)
 	goto out;
-      r = _do_write(txc, c, newo, dstoff, bl.length(), bl, 0);
+      r = _do_write(txc, c, newo, dstoff, bl.length(), bl, 0);   //TODO: 写数据
       if (r < 0)
 	goto out;
     }
   }
 
-  txc->write_onode(newo);
+  txc->write_onode(newo);         //TODO: 更新元数据
   r = 0;
 
  out:

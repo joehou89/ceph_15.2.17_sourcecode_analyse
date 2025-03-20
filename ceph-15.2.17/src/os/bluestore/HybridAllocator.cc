@@ -38,7 +38,7 @@ int64_t HybridAllocator::allocate(
     max_alloc_size = p2align(uint64_t(cap), (uint64_t)get_block_size());
   }
 
-  std::lock_guard l(lock);
+  std::lock_guard l(lock);  //加锁，分配也是串行执行
 
   int64_t res;
   PExtentVector local_extents;

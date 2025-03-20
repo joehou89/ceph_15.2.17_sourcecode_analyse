@@ -1,6 +1,15 @@
 // -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*-
 // vim: ts=8 sw=2 smarttab
 
+
+/*
+TODO:
+真正部署起来一个ceph15.2.17 版本的存储集群
+通过ceph daemon osd.0 config show | grep alloc
+查看对应的磁盘分配器类型: bluestore_alloctor: hybrid
+*/
+
+
 #pragma once
 
 #include <mutex>
@@ -9,7 +18,7 @@
 #include "BitmapAllocator.h"
 
 class HybridAllocator : public AvlAllocator {
-  BitmapAllocator* bmap_alloc = nullptr;
+  BitmapAllocator* bmap_alloc = nullptr;  //bit磁盘空间管理实例
 public:
   HybridAllocator(CephContext* cct, int64_t device_size, int64_t _block_size,
                   uint64_t max_mem,

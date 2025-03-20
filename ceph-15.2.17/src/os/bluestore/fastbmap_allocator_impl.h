@@ -719,42 +719,42 @@ protected:
     // Looks like they have negative impact on the performance
     for (auto i = 0; i < 2; ++i) {
       for(; length > *allocated && pos < pos_end; ++pos) {
-	slot_t& slot_val = l2[pos];
-	size_t free_pos = 0;
-	bool all_set = false;
-	if (slot_val == all_slot_clear) {
-	  l2_pos += d;
-	  last_pos = l2_pos;
-	  continue;
-	} else if (slot_val == all_slot_set) {
-	  free_pos = 0;
-	  all_set = true;
-	} else {
-	  free_pos = find_next_set_bit(slot_val, 0);
-	  ceph_assert(free_pos < bits_per_slot);
-	}
-	do {
-	  ceph_assert(length > *allocated);
-	  bool empty = l1._allocate_l1(length,
-	    min_length,
-	    max_length,
-	    (l2_pos + free_pos) * l1_w,
-	    (l2_pos + free_pos + 1) * l1_w,
-	    allocated,
-	    res);
-	  if (empty) {
-	    slot_val &= ~(slot_t(1) << free_pos);
-	  }
-	  if (length <= *allocated || slot_val == all_slot_clear) {
-	    break;
-	  }
-	  ++free_pos;
-	  if (!all_set) {
-	    free_pos = find_next_set_bit(slot_val, free_pos);
-	  }
-	} while (free_pos < bits_per_slot);
-	last_pos = l2_pos;
-	l2_pos += d;
+	      slot_t& slot_val = l2[pos];
+	      size_t free_pos = 0;
+	      bool all_set = false;
+	      if (slot_val == all_slot_clear) {
+	        l2_pos += d;
+	        last_pos = l2_pos;
+	        continue;
+	      } else if (slot_val == all_slot_set) {
+	        free_pos = 0;
+	        all_set = true;
+	      } else {
+	        free_pos = find_next_set_bit(slot_val, 0);
+	        ceph_assert(free_pos < bits_per_slot);
+	      }
+        do {
+          ceph_assert(length > *allocated);
+          bool empty = l1._allocate_l1(length,
+            min_length,
+            max_length,
+            (l2_pos + free_pos) * l1_w,
+            (l2_pos + free_pos + 1) * l1_w,
+            allocated,
+            res);
+          if (empty) {
+            slot_val &= ~(slot_t(1) << free_pos);
+          }
+          if (length <= *allocated || slot_val == all_slot_clear) {
+            break;
+          }
+          ++free_pos;
+          if (!all_set) {
+            free_pos = find_next_set_bit(slot_val, free_pos);
+          }
+        } while (free_pos < bits_per_slot);
+	      last_pos = l2_pos;
+	      l2_pos += d;
       }
       l2_pos = 0;
       pos = 0;

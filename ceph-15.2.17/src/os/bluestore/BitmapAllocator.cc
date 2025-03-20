@@ -30,7 +30,8 @@ int64_t BitmapAllocator::allocate(
 		 << "/" << alloc_unit << "," << max_alloc_size << "," << hint
 		 << std::dec << dendl;
     
-    
+
+  //TODO: 首先从L2层进行分配    
   _allocate_l2(want_size, alloc_unit, max_alloc_size, hint,
     &allocated, extents);
   if (!allocated) {

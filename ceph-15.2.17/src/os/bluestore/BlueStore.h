@@ -3076,7 +3076,7 @@ private:
       size_t compressed_len = 0;
 
       write_item(
-	uint64_t logical_offs,
+	      uint64_t logical_offs,
         BlobRef b,
         uint64_t blob_len,
         uint64_t o,
@@ -3084,7 +3084,7 @@ private:
         uint64_t o0,
         uint64_t l0,
         bool _mark_unused,
-	bool _new_blob)
+	      bool _new_blob)
        :
          logical_offset(logical_offs),
          b(b),
@@ -3094,8 +3094,9 @@ private:
          b_off0(o0),
          length0(l0),
          mark_unused(_mark_unused),
-	 new_blob(_new_blob) {}
+	    new_blob(_new_blob) {}
     };
+    //TODO: 是一个数组，要写的数据内容的集合
     vector<write_item> writes;                 ///< blobs we're writing
 
     /// partial clone of the context
