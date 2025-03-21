@@ -110,6 +110,8 @@ private:
     uint64_t *offset,
     uint64_t *length);
 
+  //TODO: 这个是一个boost库提供的嵌入式set，就是一颗avl-tree(平衡二插搜索树),只是树上节点元素不存在拷贝
+  //树的类型是range_tree_t, 树元素类型是range_set_t
   using range_tree_t = 
     boost::intrusive::avl_set<
       range_seg_t,

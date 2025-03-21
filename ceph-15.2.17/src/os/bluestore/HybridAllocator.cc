@@ -33,6 +33,7 @@ int64_t HybridAllocator::allocate(
   if (max_alloc_size == 0) {
     max_alloc_size = want;
   }
+  //是c++11提供的一个语法，用于返回bluestore_pextent_t::length类型的最大值，然后这个最大值和max_alloc_size进行比较
   if (constexpr auto cap = std::numeric_limits<decltype(bluestore_pextent_t::length)>::max();
       max_alloc_size >= cap) {
     max_alloc_size = p2align(uint64_t(cap), (uint64_t)get_block_size());
@@ -52,15 +53,14 @@ int64_t HybridAllocator::allocate(
 
   // try bitmap first to avoid unneeded contiguous extents split if
   // desired amount is less than shortes range in AVL
-  if (bmap_alloc && bmap_alloc->get_free() &&
-    want < _lowest_size_available()) {
+  if (bmap_alloc && bmap_alloc->get_free() && want < _lowest_size_available()) {
+    //优先从bitmap分配器开始
     res = bmap_alloc->allocate(want, unit, max_alloc_size, hint, extents);
     if (res < 0) {
       // got a failure, release already allocated and
       // start over allocation from avl
       if (orig_size) {
-        local_extents.insert(
-          local_extents.end(), ++orig_pos, extents->end());
+        local_extents.insert(local_extents.end(), ++orig_pos, extents->end());
         extents->resize(orig_size);
       } else {
         extents->swap(local_extents);

@@ -31,9 +31,10 @@ public:
    * Apart from that extents can vary between these lower and higher limits according
    * to free block search algorithm and availability of contiguous space.
    */
+  //Allocater分配器是一个基类，提供的API allocate是一个纯虚函数，所以其派生类就要重写这个函数的实现，所以后面会带一个override关键字
   virtual int64_t allocate(uint64_t want_size, uint64_t alloc_unit,
 			   uint64_t max_alloc_size, int64_t hint,
-			   PExtentVector *extents) = 0;
+			   PExtentVector *extents) = 0;  
 
   int64_t allocate(uint64_t want_size, uint64_t alloc_unit,
 		   int64_t hint, PExtentVector *extents) {

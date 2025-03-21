@@ -78,6 +78,9 @@ WRITE_CLASS_DENC(bluestore_cnode_t)
 
 ostream& operator<<(ostream& out, const bluestore_cnode_t& l);
 
+/*
+TODO: 这是一个模板结构体，入参就是offset,length
+*/
 template <typename OFFS_TYPE, typename LEN_TYPE>
 struct bluestore_interval_t
 {
@@ -103,7 +106,10 @@ struct bluestore_interval_t
 };
 
 /// pextent: physical extent
-/*描述的是一段连续的物理磁盘空间*/
+/*描述的是一段连续的物理磁盘空间
+结构体带_t的都是对象在磁盘的描述结构，字段就是<offset, length>
+
+*/
 struct bluestore_pextent_t : public bluestore_interval_t<uint64_t, uint32_t> 
 {
   bluestore_pextent_t() {}
