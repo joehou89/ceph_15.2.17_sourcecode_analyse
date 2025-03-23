@@ -13742,12 +13742,14 @@ void BlueStore::_do_write_small(
   auto begin = o->extent_map.extent_map.begin();  //begin表示的是每一个Extent
   auto end = o->extent_map.extent_map.end();      //end表示的是每一个Extent
   auto ep = o->extent_map.seek_lextent(offset);
+  //这段代码是找符合写入数据偏移offset的位置
   if (ep != begin) {
     --ep;
     if (ep->blob_end() <= offset) {
       ++ep;
     }
   }
+  //这段代码没看懂用意，似乎是寻求一段区间，后面的判断处理会用到
   auto prev_ep = ep;
   if (prev_ep != begin) {
     --prev_ep;
