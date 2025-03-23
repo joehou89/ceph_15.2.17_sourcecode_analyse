@@ -1,0 +1,14 @@
+messagescan=no
+hd=default,vdbench=/root/vdbench50407,user=root,shell=ssh
+
+hd=hd1,system=172.30.240.24
+
+sd=default,openflags=o_direct,threads=256,size=9T
+
+sd=sd1,hd=hd1,lun=/dev/rbd0
+
+wd=wd1,sd=sd*,seekpct=100,rdpct=0,xfersize=4M
+
+rd=rd1,wd=wd1,iorate=max,elapsed=6048000,interval=1,pause=150
+#rd=rd2,wd=wd2,iorate=max,elapsed=900,interval=1,pause=150
+
