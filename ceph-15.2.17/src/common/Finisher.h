@@ -36,6 +36,13 @@ enum {
  * representing callbacks, in a dedicated worker thread. Enqueuing
  * contexts to complete is thread-safe.
  */
+
+/*
+TODO: Finisher是一个回调类，但是ceph10.2.10版本和ceph15.2.17版本在store层的处理不太一样，
+
+
+*/
+
 class Finisher {
   CephContext *cct;
   ceph::mutex finisher_lock; ///< Protects access to queues and finisher_running.
