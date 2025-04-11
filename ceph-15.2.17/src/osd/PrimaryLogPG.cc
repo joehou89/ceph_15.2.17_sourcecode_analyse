@@ -1626,9 +1626,7 @@ void PrimaryLogPG::handle_backoff(OpRequestRef& op)
   session->ack_backoff(cct, m->pgid, m->id, begin, end);
 }
 
-void PrimaryLogPG::do_request(
-  OpRequestRef& op,
-  ThreadPool::TPHandle &handle)
+void PrimaryLogPG::do_request(OpRequestRef& op, ThreadPool::TPHandle &handle)
 {
   if (op->osd_trace) {
     op->pg_trace.init("pg op", &trace_endpoint, &op->osd_trace);

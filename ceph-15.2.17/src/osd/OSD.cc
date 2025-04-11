@@ -6990,9 +6990,9 @@ void OSD::dispatch_session_waiting(const ceph::ref_t<Session>& session, OSDMapRe
     spg_t pgid;
     if (m->get_type() == CEPH_MSG_OSD_OP) {
       pg_t actual_pgid = osdmap->raw_pg_to_pg(
-	static_cast<const MOSDOp*>(m)->get_pg());
+	    static_cast<const MOSDOp*>(m)->get_pg());
       if (!osdmap->get_primary_shard(actual_pgid, &pgid)) {
-	continue;
+	      continue;
       }
     } else {
       pgid = m->get_spg();
@@ -9698,9 +9698,7 @@ void OSD::enqueue_peering_evt(spg_t pgid, PGPeeringEventRef evt)
 /*
  * NOTE: dequeue called in worker thread, with pg lock
  */
-void OSD::dequeue_op(
-  PGRef pg, OpRequestRef op,
-  ThreadPool::TPHandle &handle)
+void OSD::dequeue_op(PGRef pg, OpRequestRef op, ThreadPool::TPHandle &handle)
 {
   const Message *m = op->get_req();
 
