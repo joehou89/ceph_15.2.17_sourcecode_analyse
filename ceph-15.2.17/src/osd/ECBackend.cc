@@ -928,17 +928,11 @@ void ECBackend::handle_sub_write(
     add_temp_objs(op.temp_added);
   }
   if (op.backfill_or_async_recovery) {
-    for (set<hobject_t>::iterator i = op.temp_removed.begin();
-	 i != op.temp_removed.end();
-	 ++i) {
-      dout(10) << __func__ << ": removing object " << *i
-	       << " since we won't get the transaction" << dendl;
+    for (set<hobject_t>::iterator i = op.temp_removed.begin(); i != op.temp_removed.end(); ++i) {
+      dout(10) << __func__ << ": removing object " << *i << " since we won't get the transaction" << dendl;
       localt.remove(
-	coll,
-	ghobject_t(
-	  *i,
-	  ghobject_t::NO_GEN,
-	  get_parent()->whoami_shard().shard));
+	      coll,
+	      ghobject_t(*i, ghobject_t::NO_GEN, get_parent()->whoami_shard().shard));
     }
   }
   clear_temp_objs(op.temp_removed);
