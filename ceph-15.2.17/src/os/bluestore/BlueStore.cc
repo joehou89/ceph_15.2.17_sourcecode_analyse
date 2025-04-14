@@ -13144,8 +13144,7 @@ int BlueStore::queue_transactions(
 
   // prepare
   //创建一个store层的事务
-  TransContext *txc = _txc_create(static_cast<Collection*>(ch.get()), osr,
-				  &on_commit);
+  TransContext *txc = _txc_create(static_cast<Collection*>(ch.get()), osr, &on_commit);
 
   //我们假设osd层传下来的事务只有1个
   //TODO:这个函数应该是store层的核心处理入口
