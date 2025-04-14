@@ -22,6 +22,10 @@
 #include "PGTransaction.h"
 #include "ExtentCache.h"
 
+/*
+TODO: ECTracsaction：表示针对EC的事务类
+
+*/
 namespace ECTransaction {
   struct WritePlan {
     PGTransactionUPtr t;
@@ -37,11 +41,7 @@ namespace ECTransaction {
     const PGTransaction::ObjectOperation &op);
 
   template <typename F>
-  WritePlan get_write_plan(
-    const ECUtil::stripe_info_t &sinfo,
-    PGTransactionUPtr &&t,
-    F &&get_hinfo,
-    DoutPrefixProvider *dpp) {
+  WritePlan get_write_plan(const ECUtil::stripe_info_t &sinfo, PGTransactionUPtr &&t, F &&get_hinfo, DoutPrefixProvider *dpp) {
     WritePlan plan;
     t->safe_create_traverse(
       [&](pair<const hobject_t, PGTransaction::ObjectOperation> &i) {

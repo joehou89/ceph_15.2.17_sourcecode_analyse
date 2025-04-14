@@ -559,9 +559,9 @@ public:
   } pipeline_state;
 
 
-  op_list waiting_state;        /// writes waiting on pipe_state
-  op_list waiting_reads;        /// writes waiting on partial stripe reads
-  op_list waiting_commit;       /// writes waiting on initial commit
+  op_list waiting_state;        /// writes waiting on pipe_state            //写io等待在管道状态
+  op_list waiting_reads;        /// writes waiting on partial stripe reads  //写io等待在部分条带读阶段
+  op_list waiting_commit;       /// writes waiting on initial commit        //写io等待在初始提交阶段
   eversion_t completed_to;
   eversion_t committed_to;
   void start_rmw(Op *op, PGTransactionUPtr &&t);

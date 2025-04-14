@@ -1846,11 +1846,11 @@ void ECBackend::start_rmw(Op *op, PGTransactionUPtr &&t)
     [&](const hobject_t &i) {
       ECUtil::HashInfoRef ref = get_hash_info(i, false);
       if (!ref) {
-	derr << __func__ << ": get_hash_info(" << i << ")"
-	     << " returned a null pointer and there is no "
-	     << " way to recover from such an error in this "
-	     << " context" << dendl;
-	ceph_abort();
+	      derr << __func__ << ": get_hash_info(" << i << ")"
+          << " returned a null pointer and there is no "
+          << " way to recover from such an error in this "
+          << " context" << dendl;
+	      ceph_abort();
       }
       return ref;
     },
@@ -2029,10 +2029,11 @@ bool ECBackend::try_reads_to_commit()
   std::vector<std::pair<int, Message*>> messages;
   messages.reserve(get_parent()->get_acting_recovery_backfill_shards().size());
   set<pg_shard_t> backfill_shards = get_parent()->get_backfill_shards();
-  for (set<pg_shard_t>::const_iterator i =
-	 get_parent()->get_acting_recovery_backfill_shards().begin();
-       i != get_parent()->get_acting_recovery_backfill_shards().end();
-       ++i) {
+
+  //TODO: 为什么这里循环的是get_acting_recovery_backfill_shards的pg列表?
+  for (set<pg_shard_t>::const_iterator i = get_parent()->get_acting_recovery_backfill_shards().begin();
+    i != get_parent()->get_acting_recovery_backfill_shards().end();
+    ++i) {
     op->pending_apply.insert(*i);
     op->pending_commit.insert(*i);
     map<shard_id_t, ObjectStore::Transaction>::iterator iter =
@@ -2150,9 +2151,7 @@ bool ECBackend::try_finish_rmw()
 
 void ECBackend::check_ops()
 {
-  while (try_state_to_reads() ||
-	 try_reads_to_commit() ||
-	 try_finish_rmw());
+  while (try_state_to_reads() || try_reads_to_commit() || try_finish_rmw());
 }
 
 int ECBackend::objects_read_sync(
