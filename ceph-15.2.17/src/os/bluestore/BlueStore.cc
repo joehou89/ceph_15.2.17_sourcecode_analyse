@@ -12027,26 +12027,29 @@ void BlueStore::_txc_finish_io(TransContext *txc)
    */
 
   OpSequencer *osr = txc->osr.get();
-  std::lock_guard l(osr->qlock);
+  std::lock_guard l(osr->qlock);                                     //获取OpSequencer中的锁，主要是保证互斥访问txc队列
   txc->state = TransContext::STATE_IO_DONE;
   txc->ioc.release_running_aios();
-  OpSequencer::q_list_t::iterator p = osr->q.iterator_to(*txc);
+  OpSequencer::q_list_t::iterator p = osr->q.iterator_to(*txc);      //定位到当前txc在队列中的位置
   while (p != osr->q.begin()) {
     --p;
-    if (p->state < TransContext::STATE_IO_DONE) {
-      dout(20) << __func__ << " " << txc << " blocked by " << &*p << " "
-	       << p->get_state_name() << dendl;
+
+    //这一段逻辑表示前面还有未完成io操作的txc，这个txc不能继续进行下去，等待前面的完成，所以直接return
+    if (p->state < TransContext::STATE_IO_DONE) { 
+      dout(20) << __func__ << " " << txc << " blocked by " << &*p << " " << p->get_state_name() << dendl;
       return;
     }
+    //如果前面的IO已经进入下一个状态了，递增p并退出循环，下面接着处理当前的txc
     if (p->state > TransContext::STATE_IO_DONE) {
       ++p;
       break;
     }
   }
+
+  //依次处理状态为STATE_IO_DONE的txc，会将txc放入kv_sync_thread的队列kv_queue和kv_queue_unsubmitted
   do {
     _txc_state_proc(&*p++);
-  } while (p != osr->q.end() &&
-	   p->state == TransContext::STATE_IO_DONE);
+  } while (p != osr->q.end() && p->state == TransContext::STATE_IO_DONE);
 
   if (osr->kv_submitted_waiters) {
     osr->qcond.notify_all();
@@ -12249,21 +12252,18 @@ void BlueStore::_txc_finish(TransContext *txc)
     bool notify = false;
     while (!osr->q.empty()) {
       TransContext *txc = &osr->q.front();
-      dout(20) << __func__ << "  txc " << txc << " " << txc->get_state_name()
-	       << dendl;
+      dout(20) << __func__ << "  txc " << txc << " " << txc->get_state_name() << dendl;
       if (txc->state != TransContext::STATE_DONE) {
-	if (txc->state == TransContext::STATE_PREPARE &&
-	  deferred_aggressive) {
-	  // for _osr_drain_preceding()
+	      if (txc->state == TransContext::STATE_PREPARE && deferred_aggressive) {
+	        // for _osr_drain_preceding()
           notify = true;
-	}
-	if (txc->state == TransContext::STATE_DEFERRED_QUEUED &&
-	    osr->q.size() > g_conf()->bluestore_max_deferred_txc) {
-	  submit_deferred = true;
-	}
+	      }
+	      if (txc->state == TransContext::STATE_DEFERRED_QUEUED &&
+	        osr->q.size() > g_conf()->bluestore_max_deferred_txc) {
+	        submit_deferred = true;
+	      }
         break;
       }
-
       osr->q.pop_front();
       releasing_txc.push_back(*txc);
     }
@@ -13125,10 +13125,10 @@ int BlueStore::queue_transactions(
 
   // prepare
   //创建一个store层的事务,此时这个事务一开始的阶段就是STATE_PREPARE,这个就是在类定义里直接写的
+  /// 创建txc并将其在OpSequencer内部排队
   TransContext *txc = _txc_create(static_cast<Collection*>(ch.get()), osr, &on_commit);
 
-  //我们假设osd层传下来的事务只有1个
-  //TODO:这个函数应该是store层的核心处理入口
+  //将osd层面的事务，转换为BlueStore层面的事务操作
   for (vector<Transaction>::iterator p = tls.begin(); p != tls.end(); ++p) {
     txc->bytes += (*p).get_num_bytes();
     _txc_add_transaction(txc, &(*p));
@@ -13137,6 +13137,7 @@ int BlueStore::queue_transactions(
 
   _txc_write_nodes(txc, txc->t);
 
+  // 将deferred类型的日志加入k/v的事务中
   // journal deferred items
   if (txc->deferred_txn) {
     txc->deferred_txn->seq = ++deferred_seq;
@@ -13154,7 +13155,7 @@ int BlueStore::queue_transactions(
   auto tstart = mono_clock::now();
 
   /*
-  TODO: 这段代码的作用就是反压，可以看到store层事务的处理也是串行处理，如果上一个事务处理完成后，这里就要唤醒条件变量
+  TODO: 这段代码的作用就是反压或者限流，可以看到store层事务的处理也是串行处理，如果上一个事务处理完成后，这里就要唤醒条件变量
   */
   if (!throttle.try_start_transaction(*db, *txc, tstart)) {
     // ensure we do not block here because of deferred writes
@@ -13180,6 +13181,8 @@ int BlueStore::queue_transactions(
 
   logger->inc(l_bluestore_txc);
 
+  /* 执行状态机，会将io请求提交给块设备执行,该函数本身就是一个状态机,其在内部实现了一个死循环
+  */
   // execute (start)
   _txc_state_proc(txc);
 
