@@ -13135,7 +13135,7 @@ int BlueStore::queue_transactions(
   }
   _txc_calc_cost(txc);
 
-  _txc_write_nodes(txc, txc->t);
+  _txc_write_nodes(txc, txc->t);  //把要更新的元数据信息放入db事务txc->t
 
   // 将deferred类型的日志加入k/v的事务中
   // journal deferred items
@@ -14545,8 +14545,7 @@ void BlueStore::_do_write_data(
   uint64_t end = offset + length;
   bufferlist::iterator p = bl.begin();
 
-  if (offset / min_alloc_size == (end - 1) / min_alloc_size &&
-      (length != min_alloc_size)) {
+  if (offset / min_alloc_size == (end - 1) / min_alloc_size && (length != min_alloc_size)) {
     // we fall within the same block
     _do_write_small(txc, c, o, offset, length, p, wctx);
   } else {
@@ -14837,7 +14836,7 @@ int BlueStore::_write(TransContext *txc,
   } else {
     _assign_nid(txc, o);
     r = _do_write(txc, c, o, offset, length, bl, fadvise_flags);   //写数据
-    txc->write_onode(o);                                           //更新元数据
+    txc->write_onode(o);                                           //更新元数据,只是把onode先放在内存的set数据结构里,并未落盘
   }
   dout(10) << __func__ << " " << c->cid << " " << o->oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec

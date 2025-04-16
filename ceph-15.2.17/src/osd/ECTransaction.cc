@@ -135,36 +135,34 @@ void ECTransaction::generate_transactions(
       ObjectContextRef obc;
       auto obiter = t.obc_map.find(oid);
       if (obiter != t.obc_map.end()) {
-	obc = obiter->second;
+	    obc = obiter->second;
       }
       if (entry) {
-	ceph_assert(obc);
+	    ceph_assert(obc);
       } else {
-	ceph_assert(oid.is_temp());
+	    ceph_assert(oid.is_temp());
       }
 
       ECUtil::HashInfoRef hinfo;
       {
-	auto iter = hash_infos.find(oid);
-	ceph_assert(iter != hash_infos.end());
-	hinfo = iter->second;
+		auto iter = hash_infos.find(oid);
+		ceph_assert(iter != hash_infos.end());
+		hinfo = iter->second;
       }
 
       if (oid.is_temp()) {
-	if (op.is_fresh_object()) {
-	  temp_added->insert(oid);
-	} else if (op.is_delete()) {
-	  temp_removed->insert(oid);
-	}
+		if (op.is_fresh_object()) {
+		  temp_added->insert(oid);
+		} else if (op.is_delete()) {
+		  temp_removed->insert(oid);
+		}
       }
 
-      if (entry &&
-	  entry->is_modify() &&
-	  op.updated_snaps) {
-	bufferlist bl(op.updated_snaps->second.size() * 8 + 8);
-	encode(op.updated_snaps->second, bl);
-	entry->snaps.swap(bl);
-	entry->snaps.reassign_to_mempool(mempool::mempool_osd_pglog);
+      if (entry && entry->is_modify() && op.updated_snaps) {
+		bufferlist bl(op.updated_snaps->second.size() * 8 + 8);
+		encode(op.updated_snaps->second, bl);
+		entry->snaps.swap(bl);
+		entry->snaps.reassign_to_mempool(mempool::mempool_osd_pglog);
       }
 
       ldpp_dout(dpp, 20) << "generate_transactions: "
@@ -175,14 +173,11 @@ void ECTransaction::generate_transactions(
 			 << op.buffer_updates
 			 << dendl;
       if (op.truncate) {
-	ldpp_dout(dpp, 20) << "generate_transactions: "
-			   << " truncate is "
-			   << *(op.truncate)
-			   << dendl;
+		ldpp_dout(dpp, 20) << "generate_transactions: " << " truncate is " << *(op.truncate) << dendl;
       }
 
       if (entry && op.updated_snaps) {
-	entry->mod_desc.update_snaps(op.updated_snaps->first);
+		entry->mod_desc.update_snaps(op.updated_snaps->first);
       }
 
       map<string, std::optional<bufferlist> > xattr_rollback;
@@ -192,91 +187,82 @@ void ECTransaction::generate_transactions(
       xattr_rollback[ECUtil::get_hinfo_key()] = old_hinfo;
       
       if (op.is_none() && op.truncate && op.truncate->first == 0) {
-	ceph_assert(op.truncate->first == 0);
-	ceph_assert(op.truncate->first ==
-	       op.truncate->second);
-	ceph_assert(entry);
-	ceph_assert(obc);
+		ceph_assert(op.truncate->first == 0);
+		ceph_assert(op.truncate->first == op.truncate->second);
+		ceph_assert(entry);
+		ceph_assert(obc);
 	
-	if (op.truncate->first != op.truncate->second) {
-	  op.truncate->first = op.truncate->second;
-	} else {
-	  op.truncate = std::nullopt;
-	}
+		if (op.truncate->first != op.truncate->second) {
+	  	  op.truncate->first = op.truncate->second;
+	    } else {
+	      op.truncate = std::nullopt;
+	    }
 
-	op.delete_first = true;
-	op.init_type = PGTransaction::ObjectOperation::Init::Create();
+	    op.delete_first = true;
+	    op.init_type = PGTransaction::ObjectOperation::Init::Create();
 
-	if (obc) {
-	  /* We need to reapply all of the cached xattrs.
+	    if (obc) {
+	    /* We need to reapply all of the cached xattrs.
 	     * std::map insert fortunately only writes keys
 	     * which don't already exist, so this should do
 	     * the right thing. */
-	  op.attr_updates.insert(
-	    obc->attr_cache.begin(),
-	    obc->attr_cache.end());
-	}
+	      op.attr_updates.insert(obc->attr_cache.begin(), obc->attr_cache.end());
+	    }
       }
 
       if (op.delete_first) {
-	/* We also want to remove the std::nullopt entries since
-	   * the keys already won't exist */
-	for (auto j = op.attr_updates.begin();
-	     j != op.attr_updates.end();
-	  ) {
-	  if (j->second) {
-	    ++j;
-	  } else {
-	    op.attr_updates.erase(j++);
-	  }
-	}
-	/* Fill in all current entries for xattr rollback */
-	if (obc) {
-	  xattr_rollback.insert(
-	    obc->attr_cache.begin(),
-	    obc->attr_cache.end());
-	  obc->attr_cache.clear();
-	}
-	if (entry) {
-	  entry->mod_desc.rmobject(entry->version.version);
-	  for (auto &&st: *transactions) {
-	    st.second.collection_move_rename(
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(oid, ghobject_t::NO_GEN, st.first),
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(oid, entry->version.version, st.first));
-	  }
-	} else {
-	  for (auto &&st: *transactions) {
-	    st.second.remove(
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(oid, ghobject_t::NO_GEN, st.first));
-	  }
-	}
-	hinfo->clear();
+	    /* We also want to remove the std::nullopt entries since
+	    * the keys already won't exist */
+	    for (auto j = op.attr_updates.begin(); j != op.attr_updates.end();) {
+	      if (j->second) {
+	        ++j;
+	      } else {
+	        op.attr_updates.erase(j++);
+	      }
+	    }
+	    /* Fill in all current entries for xattr rollback */
+	    if (obc) {
+	      xattr_rollback.insert(obc->attr_cache.begin(), obc->attr_cache.end());
+	      obc->attr_cache.clear();
+	    }
+	    if (entry) {
+	      entry->mod_desc.rmobject(entry->version.version);
+	      for (auto &&st: *transactions) {
+	        st.second.collection_move_rename(
+	          coll_t(spg_t(pgid, st.first)),
+	          ghobject_t(oid, ghobject_t::NO_GEN, st.first),
+	          coll_t(spg_t(pgid, st.first)),
+	          ghobject_t(oid, entry->version.version, st.first));
+	      }
+	    } else {
+	      for (auto &&st: *transactions) {
+	        st.second.remove(
+	        coll_t(spg_t(pgid, st.first)),
+	        ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+	      }
+	    }
+	    hinfo->clear();
       }
 
       if (op.is_fresh_object() && entry) {
-	entry->mod_desc.create();
+	    entry->mod_desc.create();
       }
 
       match(
-	op.init_type,
-	[&](const PGTransaction::ObjectOperation::Init::None &) {},
-	[&](const PGTransaction::ObjectOperation::Init::Create &op) {
-	  for (auto &&st: *transactions) {
-	    if (require_osd_release >= ceph_release_t::octopus) {
-	      st.second.create(
-		coll_t(spg_t(pgid, st.first)),
-		ghobject_t(oid, ghobject_t::NO_GEN, st.first));
-	    } else {
-	      st.second.touch(
-		coll_t(spg_t(pgid, st.first)),
-		ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+	    op.init_type,
+	    [&](const PGTransaction::ObjectOperation::Init::None &) {},
+	    [&](const PGTransaction::ObjectOperation::Init::Create &op) {
+	    for (auto &&st: *transactions) {
+	      if (require_osd_release >= ceph_release_t::octopus) {
+	        st.second.create(
+		    coll_t(spg_t(pgid, st.first)),
+		    ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+	      } else {
+	        st.second.touch(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+	      }
 	    }
-	  }
-	},
-	[&](const PGTransaction::ObjectOperation::Init::Clone &op) {
+	  },
+	  [&](const PGTransaction::ObjectOperation::Init::Clone &op) {
 	  for (auto &&st: *transactions) {
 	    st.second.clone(
 	      coll_t(spg_t(pgid, st.first)),
@@ -313,39 +299,30 @@ void ECTransaction::generate_transactions(
 	  }
 	});
 
-      // omap not supported (except 0, handled above)
-      ceph_assert(!(op.clear_omap));
-      ceph_assert(!(op.omap_header));
-      ceph_assert(op.omap_updates.empty());
+    // omap not supported (except 0, handled above)
+    ceph_assert(!(op.clear_omap));
+    ceph_assert(!(op.omap_header));
+    ceph_assert(op.omap_updates.empty());
 
-      if (!op.attr_updates.empty()) {
-	map<string, bufferlist> to_set;
-	for (auto &&j: op.attr_updates) {
-	  if (j.second) {
-	    to_set[j.first] = *(j.second);
-	  } else {
-	    for (auto &&st : *transactions) {
-	      st.second.rmattr(
-		coll_t(spg_t(pgid, st.first)),
-		ghobject_t(oid, ghobject_t::NO_GEN, st.first),
-		j.first);
+    if (!op.attr_updates.empty()) {
+	  map<string, bufferlist> to_set;
+	  for (auto &&j: op.attr_updates) {
+	    if (j.second) {
+	      to_set[j.first] = *(j.second);
+	    } else {
+	      for (auto &&st : *transactions) {
+	        st.second.rmattr(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first), j.first);
 	    }
 	  }
 	  if (obc) {
 	    auto citer = obc->attr_cache.find(j.first);
 	    if (entry) {
 	      if (citer != obc->attr_cache.end()) {
-		// won't overwrite anything we put in earlier
-		xattr_rollback.insert(
-		  make_pair(
-		    j.first,
-		    std::optional<bufferlist>(citer->second)));
+		    // won't overwrite anything we put in earlier
+		    xattr_rollback.insert(make_pair(j.first, std::optional<bufferlist>(citer->second)));
 	      } else {
-		// won't overwrite anything we put in earlier
-		xattr_rollback.insert(
-		  make_pair(
-		    j.first,
-		    std::nullopt));
+		    // won't overwrite anything we put in earlier
+		    xattr_rollback.insert(make_pair(j.first, std::nullopt));
 	      }
 	    }
 	    if (j.second) {
@@ -366,7 +343,7 @@ void ECTransaction::generate_transactions(
 	ceph_assert(!xattr_rollback.empty());
       }
       if (entry && !xattr_rollback.empty()) {
-	entry->mod_desc.setattrs(xattr_rollback);
+		entry->mod_desc.setattrs(xattr_rollback);
       }
 
       if (op.alloc_hint) {

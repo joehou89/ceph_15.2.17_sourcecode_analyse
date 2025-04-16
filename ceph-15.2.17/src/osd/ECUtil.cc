@@ -139,21 +139,15 @@ int ECUtil::encode(
     buf.substr_of(in, i, sinfo.get_stripe_width());
     int r = ec_impl->encode(want, buf, &encoded);
     ceph_assert(r == 0);
-    for (map<int, bufferlist>::iterator i = encoded.begin();
-	 i != encoded.end();
-	 ++i) {
+    for (map<int, bufferlist>::iterator i = encoded.begin(); i != encoded.end(); ++i) {
       ceph_assert(i->second.length() == sinfo.get_chunk_size());
       (*out)[i->first].claim_append(i->second);
     }
   }
 
-  for (map<int, bufferlist>::iterator i = out->begin();
-       i != out->end();
-       ++i) {
+  for (map<int, bufferlist>::iterator i = out->begin(); i != out->end(); ++i) {
     ceph_assert(i->second.length() % sinfo.get_chunk_size() == 0);
-    ceph_assert(
-      sinfo.aligned_chunk_offset_to_logical_offset(i->second.length()) ==
-      logical_size);
+    ceph_assert(sinfo.aligned_chunk_offset_to_logical_offset(i->second.length()) == logical_size);
   }
   return 0;
 }
