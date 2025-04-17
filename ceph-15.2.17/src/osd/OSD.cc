@@ -1049,8 +1049,7 @@ void OSDService::send_message_osd_cluster(std::vector<std::pair<int, Message*>>&
   ceph_assert(from_epoch <= next_map->get_epoch());
 
   for (auto& iter : messages) {
-    if (next_map->is_down(iter.first) ||
-	next_map->get_info(iter.first).up_from > from_epoch) {
+    if (next_map->is_down(iter.first) || next_map->get_info(iter.first).up_from > from_epoch) {
       iter.second->put();
       continue;
     }
@@ -1058,14 +1057,14 @@ void OSDService::send_message_osd_cluster(std::vector<std::pair<int, Message*>>&
     if (iter.first == whoami) {
       peer_con = osd->cluster_messenger->get_loopback_connection();
     } else {
-      peer_con = osd->cluster_messenger->connect_to_osd(
-	  next_map->get_cluster_addrs(iter.first), false, true);
+      peer_con = osd->cluster_messenger->connect_to_osd(next_map->get_cluster_addrs(iter.first), false, true);
     }
     maybe_share_map(peer_con.get(), next_map);
     peer_con->send_message(iter.second);
   }
   release_map(next_map);
 }
+
 ConnectionRef OSDService::get_con_osd_cluster(int peer, epoch_t from_epoch)
 {
   OSDMapRef next_map = get_nextmap_reserved();
@@ -10502,14 +10501,12 @@ void OSD::ShardedOpWQ::_process(uint32_t thread_index, heartbeat_handle_d *hb)
       sdata->sdata_cond.wait(wait_lock);
       wait_lock.unlock();
       sdata->shard_lock.lock();
-      if (sdata->scheduler->empty() &&
-         !(is_smallest_thread_index && !sdata->context_queue.empty())) {
-	sdata->shard_lock.unlock();
-	return;
+      if (sdata->scheduler->empty() && !(is_smallest_thread_index && !sdata->context_queue.empty())) {
+	      sdata->shard_lock.unlock();
+	      return;
       }
       // found a work item; reapply default wq timeouts
-      osd->cct->get_heartbeat_map()->reset_timeout(hb,
-        timeout_interval, suicide_interval);
+      osd->cct->get_heartbeat_map()->reset_timeout(hb, timeout_interval, suicide_interval);
     } else {
       dout(20) << __func__ << " need return immediately" << dendl;
       wait_lock.unlock();
@@ -10527,8 +10524,8 @@ void OSD::ShardedOpWQ::_process(uint32_t thread_index, heartbeat_handle_d *hb)
     if (osd->is_stopping()) {
       sdata->shard_lock.unlock();
       for (auto c : oncommits) {
-	dout(10) << __func__ << " discarding in-flight oncommit " << c << dendl;
-	delete c;
+	      dout(10) << __func__ << " discarding in-flight oncommit " << c << dendl;
+	      delete c;
       }
       return;    // OSD shutdown, discard.
     }

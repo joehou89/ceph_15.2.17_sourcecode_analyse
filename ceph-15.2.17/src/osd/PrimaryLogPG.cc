@@ -3845,8 +3845,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
 
   if (op->may_write() || op->may_cache()) {
     // snap
-    if (!(m->has_flag(CEPH_OSD_FLAG_ENFORCE_SNAPC)) &&
-	pool.info.is_pool_snaps_mode()) {
+    if (!(m->has_flag(CEPH_OSD_FLAG_ENFORCE_SNAPC)) && pool.info.is_pool_snaps_mode()) {
       // use pool's snapc
       ctx->snapc = pool.snapc;
     } else {
@@ -3855,8 +3854,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
       ctx->snapc.snaps = m->get_snaps();
       filter_snapc(ctx->snapc.snaps);
     }
-    if ((m->has_flag(CEPH_OSD_FLAG_ORDERSNAP)) &&
-	ctx->snapc.seq < obc->ssc->snapset.seq) {
+    if ((m->has_flag(CEPH_OSD_FLAG_ORDERSNAP)) && ctx->snapc.seq < obc->ssc->snapset.seq) {
       dout(10) << " ORDERSNAP flag set and snapc seq " << ctx->snapc.seq
 	       << " < snapset seq " << obc->ssc->snapset.seq
 	       << " on " << obc->obs.oi.soid << dendl;

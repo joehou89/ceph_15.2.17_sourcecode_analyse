@@ -210,7 +210,8 @@ void ECTransaction::generate_transactions(
 	    }
       }
 
-      if (op.delete_first) {
+      if (op.delete_first)
+	  {
 	    /* We also want to remove the std::nullopt entries since
 	    * the keys already won't exist */
 	    for (auto j = op.attr_updates.begin(); j != op.attr_updates.end();) {
@@ -227,12 +228,14 @@ void ECTransaction::generate_transactions(
 	    }
 	    if (entry) {
 	      entry->mod_desc.rmobject(entry->version.version);
-	      for (auto &&st: *transactions) {
+	      for (auto &&st: *transactions)
+		  {
 	        st.second.collection_move_rename(
 	          coll_t(spg_t(pgid, st.first)),
 	          ghobject_t(oid, ghobject_t::NO_GEN, st.first),
 	          coll_t(spg_t(pgid, st.first)),
-	          ghobject_t(oid, entry->version.version, st.first));
+	          ghobject_t(oid, entry->version.version, st.first)
+			);
 	      }
 	    } else {
 	      for (auto &&st: *transactions) {
@@ -252,61 +255,63 @@ void ECTransaction::generate_transactions(
 	    op.init_type,
 	    [&](const PGTransaction::ObjectOperation::Init::None &) {},
 	    [&](const PGTransaction::ObjectOperation::Init::Create &op) {
-	    for (auto &&st: *transactions) {
-	      if (require_osd_release >= ceph_release_t::octopus) {
-	        st.second.create(
+			for (auto &&st: *transactions) {
+			if (require_osd_release >= ceph_release_t::octopus) {
+				st.second.create(
+				coll_t(spg_t(pgid, st.first)),
+				ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+			} else {
+				st.second.touch(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+			}
+			}
+	    },
+		[&](const PGTransaction::ObjectOperation::Init::Clone &op) {
+		  for (auto &&st: *transactions) {
+		    st.second.clone(
 		    coll_t(spg_t(pgid, st.first)),
+		    ghobject_t(op.source, ghobject_t::NO_GEN, st.first),
 		    ghobject_t(oid, ghobject_t::NO_GEN, st.first));
-	      } else {
-	        st.second.touch(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+		  }
+
+	      auto siter = hash_infos.find(op.source);
+		  ceph_assert(siter != hash_infos.end());
+		  hinfo->update_to(*(siter->second));
+
+	      if (obc) {
+	        auto cobciter = obc_map.find(op.source);
+	        ceph_assert(cobciter != obc_map.end());
+	        obc->attr_cache = cobciter->second->attr_cache;
 	      }
+	    },
+
+	    [&](const PGTransaction::ObjectOperation::Init::Rename &op) {
+		  ceph_assert(op.source.is_temp());
+		  for (auto &&st: *transactions) {
+		    st.second.collection_move_rename(
+			coll_t(spg_t(pgid, st.first)),
+			ghobject_t(op.source, ghobject_t::NO_GEN, st.first),
+			coll_t(spg_t(pgid, st.first)),
+			ghobject_t(oid, ghobject_t::NO_GEN, st.first));
+		  }
+		  auto siter = hash_infos.find(op.source);
+		  ceph_assert(siter != hash_infos.end());
+		  hinfo->update_to(*(siter->second));
+		  if (obc) {
+		    auto cobciter = obc_map.find(op.source);
+		    ceph_assert(cobciter == obc_map.end());
+		    obc->attr_cache.clear();
+		  }
 	    }
-	  },
-	  [&](const PGTransaction::ObjectOperation::Init::Clone &op) {
-	  for (auto &&st: *transactions) {
-	    st.second.clone(
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(op.source, ghobject_t::NO_GEN, st.first),
-	      ghobject_t(oid, ghobject_t::NO_GEN, st.first));
-	  }
+	  );
 
-	  auto siter = hash_infos.find(op.source);
-	  ceph_assert(siter != hash_infos.end());
-	  hinfo->update_to(*(siter->second));
+      // omap not supported (except 0, handled above)
+      ceph_assert(!(op.clear_omap));
+      ceph_assert(!(op.omap_header));
+      ceph_assert(op.omap_updates.empty());
 
-	  if (obc) {
-	    auto cobciter = obc_map.find(op.source);
-	    ceph_assert(cobciter != obc_map.end());
-	    obc->attr_cache = cobciter->second->attr_cache;
-	  }
-	},
-	[&](const PGTransaction::ObjectOperation::Init::Rename &op) {
-	  ceph_assert(op.source.is_temp());
-	  for (auto &&st: *transactions) {
-	    st.second.collection_move_rename(
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(op.source, ghobject_t::NO_GEN, st.first),
-	      coll_t(spg_t(pgid, st.first)),
-	      ghobject_t(oid, ghobject_t::NO_GEN, st.first));
-	  }
-	  auto siter = hash_infos.find(op.source);
-	  ceph_assert(siter != hash_infos.end());
-	  hinfo->update_to(*(siter->second));
-	  if (obc) {
-	    auto cobciter = obc_map.find(op.source);
-	    ceph_assert(cobciter == obc_map.end());
-	    obc->attr_cache.clear();
-	  }
-	});
-
-    // omap not supported (except 0, handled above)
-    ceph_assert(!(op.clear_omap));
-    ceph_assert(!(op.omap_header));
-    ceph_assert(op.omap_updates.empty());
-
-    if (!op.attr_updates.empty()) {
-	  map<string, bufferlist> to_set;
-	  for (auto &&j: op.attr_updates) {
+      if (!op.attr_updates.empty()) {
+	    map<string, bufferlist> to_set;
+	    for (auto &&j: op.attr_updates) {
 	    if (j.second) {
 	      to_set[j.first] = *(j.second);
 	    } else {
@@ -314,6 +319,7 @@ void ECTransaction::generate_transactions(
 	        st.second.rmattr(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first), j.first);
 	    }
 	  }
+
 	  if (obc) {
 	    auto citer = obc->attr_cache.find(j.first);
 	    if (entry) {
@@ -325,6 +331,7 @@ void ECTransaction::generate_transactions(
 		    xattr_rollback.insert(make_pair(j.first, std::nullopt));
 	      }
 	    }
+
 	    if (j.second) {
 	      obc->attr_cache[j.first] = *(j.second);
 	    } else if (citer != obc->attr_cache.end()) {
@@ -333,15 +340,13 @@ void ECTransaction::generate_transactions(
 	  } else {
 	    ceph_assert(!entry);
 	  }
-	}
-	for (auto &&st : *transactions) {
-	  st.second.setattrs(
-	    coll_t(spg_t(pgid, st.first)),
-	    ghobject_t(oid, ghobject_t::NO_GEN, st.first),
-	    to_set);
-	}
-	ceph_assert(!xattr_rollback.empty());
-      }
+    }
+    for (auto &&st : *transactions) {
+	  st.second.setattrs(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, ghobject_t::NO_GEN, st.first), to_set);
+    }
+
+    ceph_assert(!xattr_rollback.empty());
+  }
       if (entry && !xattr_rollback.empty()) {
 		entry->mod_desc.setattrs(xattr_rollback);
       }
@@ -473,14 +478,11 @@ void ECTransaction::generate_transactions(
 	  ceph_assert(off > append_after);
 	  bl.prepend_zero(off - new_size);
 	  len += off - new_size;
-	  ldpp_dout(dpp, 20) << __func__ << ": prepending zeroes to align "
-			     << off << "->" << new_size
-			     << dendl;
+	  ldpp_dout(dpp, 20) << __func__ << ": prepending zeroes to align " << off << "->" << new_size << dendl;
 	  off = new_size;
 	}
 	if (!sinfo.logical_offset_is_stripe_aligned(end) && (end > append_after)) {
-	  uint64_t aligned_end = sinfo.logical_to_next_stripe_offset(
-	    end);
+	  uint64_t aligned_end = sinfo.logical_to_next_stripe_offset(end);
 	  uint64_t tail = aligned_end - end;
 	  bl.append_zero(tail);
 	  ldpp_dout(dpp, 20) << __func__ << ": appending zeroes to align end "
@@ -496,50 +498,34 @@ void ECTransaction::generate_transactions(
 	  new_size = end;
       }
 
-      if (op.truncate &&
-	  op.truncate->second > new_size) {
-	ceph_assert(op.truncate->second > append_after);
-	uint64_t truncate_to =
-	  sinfo.logical_to_next_stripe_offset(
-	    op.truncate->second);
-	uint64_t zeroes = truncate_to - new_size;
-	bufferlist bl;
-	bl.append_zero(zeroes);
-	to_write.insert(
-	  new_size,
-	  zeroes,
-	  bl);
-	new_size = truncate_to;
-	ldpp_dout(dpp, 20) << __func__ << ": truncating out to "
-			   << truncate_to
-			   << dendl;
+      if (op.truncate && op.truncate->second > new_size) {
+	    ceph_assert(op.truncate->second > append_after);
+	    uint64_t truncate_to = sinfo.logical_to_next_stripe_offset(op.truncate->second);
+	    uint64_t zeroes = truncate_to - new_size;
+	    bufferlist bl;
+	    bl.append_zero(zeroes);
+	    to_write.insert(new_size, zeroes, bl);
+	    new_size = truncate_to;
+	    ldpp_dout(dpp, 20) << __func__ << ": truncating out to " << truncate_to << dendl;
       }
 
       set<int> want;
       for (unsigned i = 0; i < ecimpl->get_chunk_count(); ++i) {
-	want.insert(i);
+		want.insert(i);
       }
       auto to_overwrite = to_write.intersect(0, append_after);
-      ldpp_dout(dpp, 20) << __func__ << ": to_overwrite: "
-			 << to_overwrite
-			 << dendl;
+      ldpp_dout(dpp, 20) << __func__ << ": to_overwrite: " << to_overwrite << dendl;
       for (auto &&extent: to_overwrite) {
-	ceph_assert(extent.get_off() + extent.get_len() <= append_after);
-	ceph_assert(sinfo.logical_offset_is_stripe_aligned(extent.get_off()));
-	ceph_assert(sinfo.logical_offset_is_stripe_aligned(extent.get_len()));
-	if (entry) {
-	  uint64_t restore_from = sinfo.aligned_logical_offset_to_chunk_offset(
-	    extent.get_off());
-	  uint64_t restore_len = sinfo.aligned_logical_offset_to_chunk_offset(
-	    extent.get_len());
-	  ldpp_dout(dpp, 20) << __func__ << ": overwriting "
-			     << restore_from << "~" << restore_len
-			     << dendl;
+	    ceph_assert(extent.get_off() + extent.get_len() <= append_after);
+	    ceph_assert(sinfo.logical_offset_is_stripe_aligned(extent.get_off()));
+	    ceph_assert(sinfo.logical_offset_is_stripe_aligned(extent.get_len()));
+	    if (entry) {
+	      uint64_t restore_from = sinfo.aligned_logical_offset_to_chunk_offset(extent.get_off());
+	      uint64_t restore_len = sinfo.aligned_logical_offset_to_chunk_offset(extent.get_len());
+	      ldpp_dout(dpp, 20) << __func__ << ": overwriting " << restore_from << "~" << restore_len << dendl;
 	  if (rollback_extents.empty()) {
 	    for (auto &&st : *transactions) {
-	      st.second.touch(
-		coll_t(spg_t(pgid, st.first)),
-		ghobject_t(oid, entry->version.version, st.first));
+	      st.second.touch(coll_t(spg_t(pgid, st.first)), ghobject_t(oid, entry->version.version, st.first));
 	    }
 	  }
 	  rollback_extents.emplace_back(make_pair(restore_from, restore_len));
@@ -595,42 +581,32 @@ void ECTransaction::generate_transactions(
 	  dpp);
       }
 
-      ldpp_dout(dpp, 20) << __func__ << ": " << oid
-			 << " resetting hinfo to logical size "
-			 << new_size
-			 << dendl;
-      if (!rollback_extents.empty() && entry) {
-	if (entry) {
-	  ldpp_dout(dpp, 20) << __func__ << ": " << oid
-			     << " marking rollback extents "
-			     << rollback_extents
-			     << dendl;
-	  entry->mod_desc.rollback_extents(
-	    entry->version.version, rollback_extents);
-	}
-	hinfo->set_total_chunk_size_clear_hash(
-	  sinfo.aligned_logical_offset_to_chunk_offset(new_size));
-      } else {
-	ceph_assert(hinfo->get_total_logical_size(sinfo) == new_size);
-      }
+    ldpp_dout(dpp, 20) << __func__ << ": " << oid << " resetting hinfo to logical size " << new_size << dendl;
+    if (!rollback_extents.empty() && entry) {
+	  if (entry) {
+	    ldpp_dout(dpp, 20) << __func__ << ": " << oid << " marking rollback extents " << rollback_extents << dendl;
+	    entry->mod_desc.rollback_extents(entry->version.version, rollback_extents);
+	  }
+	  hinfo->set_total_chunk_size_clear_hash(sinfo.aligned_logical_offset_to_chunk_offset(new_size));
+    } else {
+	  ceph_assert(hinfo->get_total_logical_size(sinfo) == new_size);
+    }
 
-      if (entry && !to_append.empty()) {
-	ldpp_dout(dpp, 20) << __func__ << ": marking append "
-			   << append_after
-			   << dendl;
-	entry->mod_desc.append(append_after);
-      }
+    if (entry && !to_append.empty()) {
+	  ldpp_dout(dpp, 20) << __func__ << ": marking append " << append_after << dendl;
+	  entry->mod_desc.append(append_after);
+    }
 
-      if (!op.is_delete()) {
-	bufferlist hbuf;
-	encode(*hinfo, hbuf);
-	for (auto &&i : *transactions) {
-	  i.second.setattr(
+    if (!op.is_delete()) {
+	  bufferlist hbuf;
+	  encode(*hinfo, hbuf);
+	  for (auto &&i : *transactions) {
+	    i.second.setattr(
 	    coll_t(spg_t(pgid, i.first)),
 	    ghobject_t(oid, ghobject_t::NO_GEN, i.first),
 	    ECUtil::get_hinfo_key(),
 	    hbuf);
-	}
-      }
-    });
+	  }
+    }
+  });
 }

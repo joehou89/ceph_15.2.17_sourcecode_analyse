@@ -1567,80 +1567,80 @@ protected:
   {
     OSD *osd;
 
-  public:
-    ShardedOpWQ(OSD *o,
-		time_t ti,
-		time_t si,
-		ShardedThreadPool* tp)
-      : ShardedThreadPool::ShardedWQ<OpSchedulerItem>(ti, si, tp),
-        osd(o) {
-    }
-
-    void _add_slot_waiter(
-      spg_t token,
-      OSDShardPGSlot *slot,
-      OpSchedulerItem&& qi);
-
-    /// try to do some work
-    void _process(uint32_t thread_index, heartbeat_handle_d *hb) override;
-
-    /// enqueue a new item
-    void _enqueue(OpSchedulerItem&& item) override;
-
-    /// requeue an old item (at the front of the line)
-    void _enqueue_front(OpSchedulerItem&& item) override;
-      
-    void return_waiting_threads() override {
-      for(uint32_t i = 0; i < osd->num_shards; i++) {
-	OSDShard* sdata = osd->shards[i];
-	assert (NULL != sdata);
-	std::scoped_lock l{sdata->sdata_wait_lock};
-	sdata->stop_waiting = true;
-	sdata->sdata_cond.notify_all();
+    public:
+      ShardedOpWQ(OSD *o,
+      time_t ti,
+      time_t si,
+      ShardedThreadPool* tp)
+        : ShardedThreadPool::ShardedWQ<OpSchedulerItem>(ti, si, tp),
+          osd(o) {
       }
-    }
 
-    void stop_return_waiting_threads() override {
-      for(uint32_t i = 0; i < osd->num_shards; i++) {
-	OSDShard* sdata = osd->shards[i];
-	assert (NULL != sdata);
-	std::scoped_lock l{sdata->sdata_wait_lock};
-	sdata->stop_waiting = false;
+      void _add_slot_waiter(
+        spg_t token,
+        OSDShardPGSlot *slot,
+        OpSchedulerItem&& qi);
+
+      /// try to do some work
+      void _process(uint32_t thread_index, heartbeat_handle_d *hb) override;
+
+      /// enqueue a new item
+      void _enqueue(OpSchedulerItem&& item) override;
+
+      /// requeue an old item (at the front of the line)
+      void _enqueue_front(OpSchedulerItem&& item) override;
+        
+      void return_waiting_threads() override {
+        for(uint32_t i = 0; i < osd->num_shards; i++) {
+          OSDShard* sdata = osd->shards[i];
+          assert (NULL != sdata);
+          std::scoped_lock l{sdata->sdata_wait_lock};
+          sdata->stop_waiting = true;
+          sdata->sdata_cond.notify_all();
+        }
       }
-    }
 
-    void dump(Formatter *f) {
-      for(uint32_t i = 0; i < osd->num_shards; i++) {
-	auto &&sdata = osd->shards[i];
-
-	char queue_name[32] = {0};
-	snprintf(queue_name, sizeof(queue_name), "%s%" PRIu32, "OSD:ShardedOpWQ:", i);
-	ceph_assert(NULL != sdata);
-
-	std::scoped_lock l{sdata->shard_lock};
-	f->open_object_section(queue_name);
-	sdata->scheduler->dump(*f);
-	f->close_section();
+      void stop_return_waiting_threads() override {
+        for(uint32_t i = 0; i < osd->num_shards; i++) {
+          OSDShard* sdata = osd->shards[i];
+          assert (NULL != sdata);
+          std::scoped_lock l{sdata->sdata_wait_lock};
+          sdata->stop_waiting = false;
+        }
       }
-    }
 
-    bool is_shard_empty(uint32_t thread_index) override {
-      uint32_t shard_index = thread_index % osd->num_shards;
-      auto &&sdata = osd->shards[shard_index];
-      ceph_assert(sdata);
-      std::lock_guard l(sdata->shard_lock);
-      if (thread_index < osd->num_shards) {
-	return sdata->scheduler->empty() && sdata->context_queue.empty();
-      } else {
-	return sdata->scheduler->empty();
-      }
-    }
+      void dump(Formatter *f) {
+        for(uint32_t i = 0; i < osd->num_shards; i++) {
+          auto &&sdata = osd->shards[i];
 
-    void handle_oncommits(list<Context*>& oncommits) {
-      for (auto p : oncommits) {
-	p->complete(0);
+          char queue_name[32] = {0};
+          snprintf(queue_name, sizeof(queue_name), "%s%" PRIu32, "OSD:ShardedOpWQ:", i);
+          ceph_assert(NULL != sdata);
+
+          std::scoped_lock l{sdata->shard_lock};
+          f->open_object_section(queue_name);
+          sdata->scheduler->dump(*f);
+          f->close_section();
+        }
       }
-    }
+
+      bool is_shard_empty(uint32_t thread_index) override {
+        uint32_t shard_index = thread_index % osd->num_shards;
+        auto &&sdata = osd->shards[shard_index];
+        ceph_assert(sdata);
+        std::lock_guard l(sdata->shard_lock);
+        if (thread_index < osd->num_shards) {
+          return sdata->scheduler->empty() && sdata->context_queue.empty();
+        } else {
+          return sdata->scheduler->empty();
+        }
+      }
+
+      void handle_oncommits(list<Context*>& oncommits) {
+        for (auto p : oncommits) {
+          p->complete(0);
+        }
+      }
   } op_shardedwq;
 
 
