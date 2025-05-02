@@ -1,0 +1,196 @@
+(nova-libvirt)[root@rgccz-compute005 /]#  virsh qemu-monitor-command instance-00000885 --pretty '{"execute":"query-block"}'
+{
+  "return": [
+    {
+      "io-status": "ok",
+      "device": "",
+      "locked": true,
+      "removable": true,
+      "inserted": {
+        "iops_rd": 0,
+        "detect_zeroes": "off",
+        "image": {
+          "virtual-size": 468992,
+          "filename": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"vms\", \"image\": \"629b29b9-b0fb-4766-b27d-f4a686d5cbda_disk.config\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"nova\"}}",
+          "cluster-size": 4194304,
+          "format": "raw",
+          "dirty-flag": false
+        },
+        "iops_wr": 0,
+        "ro": true,
+        "node-name": "libvirt-4-format",
+        "backing_file_depth": 0,
+        "drv": "raw",
+        "iops": 0,
+        "bps_wr": 0,
+        "write_threshold": 0,
+        "encrypted": false,
+        "bps": 0,
+        "bps_rd": 0,
+        "cache": {
+          "no-flush": false,
+          "direct": true,
+          "writeback": true
+        },
+        "file": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"vms\", \"image\": \"629b29b9-b0fb-4766-b27d-f4a686d5cbda_disk.config\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"nova\"}}"
+      },
+      "qdev": "ide0-0-0",
+      "tray_open": false,
+      "type": "unknown"
+    },
+    {
+      "io-status": "ok",
+      "device": "",
+      "locked": false,
+      "removable": false,
+      "inserted": {
+        "iops_rd": 0,
+        "detect_zeroes": "off",
+        "image": {
+          "virtual-size": 53687091200,
+          "filename": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-07e0e805-a3e0-4833-bdf0-70fcecd4c621\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}",
+          "cluster-size": 4194304,
+          "format": "raw",
+          "dirty-flag": false
+        },
+        "iops_wr": 0,
+        "ro": false,
+        "node-name": "libvirt-3-format",
+        "backing_file_depth": 0,
+        "drv": "raw",
+        "iops": 0,
+        "bps_wr": 0,
+        "write_threshold": 0,
+        "encrypted": false,
+        "bps": 0,
+        "bps_rd": 0,
+        "cache": {
+          "no-flush": false,
+          "direct": true,
+          "writeback": true
+        },
+        "file": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-07e0e805-a3e0-4833-bdf0-70fcecd4c621\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}"
+      },
+      "qdev": "/machine/peripheral/virtio-disk0/virtio-backend",
+      "type": "unknown"
+    },
+    {
+      "io-status": "ok",
+      "device": "",
+      "locked": false,
+      "removable": false,
+      "inserted": {
+        "iops_rd": 0,
+        "detect_zeroes": "off",
+        "image": {
+          "virtual-size": 536870912000,
+          "filename": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-05490bca-d9d3-41db-a3e1-71b4cc4ca8aa\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}",
+          "cluster-size": 4194304,
+          "format": "raw",
+          "dirty-flag": false
+        },
+        "iops_wr": 0,
+        "ro": false,
+        "node-name": "libvirt-2-format",
+        "backing_file_depth": 0,
+        "drv": "raw",
+        "iops": 0,
+        "bps_wr": 0,
+        "write_threshold": 0,
+        "encrypted": false,
+        "bps": 0,
+        "bps_rd": 0,
+        "cache": {
+          "no-flush": false,
+          "direct": true,
+          "writeback": true
+        },
+        "file": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-05490bca-d9d3-41db-a3e1-71b4cc4ca8aa\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}"
+      },
+      "qdev": "/machine/peripheral/virtio-disk1/virtio-backend",
+      "type": "unknown"
+    },
+    {
+      "io-status": "ok",
+      "device": "",
+      "locked": false,
+      "removable": false,
+      "inserted": {
+        "iops_rd": 0,
+        "detect_zeroes": "off",
+        "image": {
+          "virtual-size": 21474836480,
+          "filename": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-ec0e79b1-059e-4202-9fae-fdfe381786f1\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}",
+          "cluster-size": 4194304,
+          "format": "raw",
+          "dirty-flag": false
+        },
+        "iops_wr": 0,
+        "ro": false,
+        "node-name": "libvirt-1-format",
+        "backing_file_depth": 0,
+        "drv": "raw",
+        "iops": 0,
+        "bps_wr": 0,
+        "write_threshold": 0,
+        "encrypted": false,
+        "bps": 0,
+        "bps_rd": 0,
+        "cache": {
+          "no-flush": false,
+          "direct": true,
+          "writeback": true
+        },
+        "file": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-ec0e79b1-059e-4202-9fae-fdfe381786f1\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}"
+      },
+      "qdev": "/machine/peripheral/virtio-disk2/virtio-backend",
+      "type": "unknown"
+    },
+    {
+      "io-status": "ok",
+      "device": "",
+      "locked": false,
+      "removable": false,
+      "inserted": {
+        "iops_rd": 0,
+        "detect_zeroes": "off",
+        "image": {
+          "virtual-size": 10737418240,
+          "filename": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-c22acb18-663c-4621-b744-5f9fbf51c991\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}",
+          "cluster-size": 4194304,
+          "format": "raw",
+          "dirty-flag": false
+        },
+        "iops_wr": 0,
+        "ro": false,
+        "node-name": "libvirt-5-format",
+        "backing_file_depth": 0,
+        "drv": "raw",
+        "iops": 0,
+        "bps_wr": 0,
+        "write_threshold": 0,
+        "encrypted": false,
+        "bps": 0,
+        "bps_rd": 0,
+        "cache": {
+          "no-flush": false,
+          "direct": true,
+          "writeback": true
+        },
+        "file": "json:{\"driver\": \"raw\", \"file\": {\"pool\": \"sata_pool\", \"image\": \"volume-c22acb18-663c-4621-b744-5f9fbf51c991\", \"server.0.host\": \"172.30.97.90\", \"server.1.host\": \"172.30.97.91\", \"server.2.host\": \"172.30.97.92\", \"driver\": \"rbd\", \"server.0.port\": \"6789\", \"server.1.port\": \"6789\", \"server.2.port\": \"6789\", \"user\": \"cinder\"}}"
+      },
+      "qdev": "/machine/peripheral/virtio-disk3/virtio-backend",
+      "type": "unknown"
+    }
+  ],
+  "id": "libvirt-2400"
+}
+(nova-libvirt)[root@rgccz-compute005 /]# 
+(nova-libvirt)[root@rgccz-compute005 /]# virsh qemu-monitor-command instance-00000885 --pretty '{"execute":"drive-mirror","arguments":{"job-id": "mirror0","device":"libvirt-5-format","target":"rbd:sata_pool/volume-c22acb18-663c-4621-b744-5f9fbf51c991:auth_supported=none:mon_host=172.31.189.55\\:6789","sync":"full","format":"raw"}}'
+{
+  "return": {
+
+  },
+  "id": "libvirt-2426"
+}
+(nova-libvirt)[root@rgccz-compute005 /]# 
