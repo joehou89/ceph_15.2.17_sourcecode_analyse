@@ -1,0 +1,6 @@
+使用linux系统提供的定时任务crontab,定时调用脚本check.py脚本  
+crontab -e 编写定时任务命令  
+```sh  
+*/1 * * * * /usr/bin/python3 /opt/slow_ops/check.py >> /opt/slow_ops/check.log 2>&1  
+```    
+  
