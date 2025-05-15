@@ -11921,8 +11921,9 @@ void BlueStore::_txc_state_proc(TransContext *txc)
     switch (txc->state) {
       case TransContext::STATE_PREPARE:
         throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
+        //判断ioctx上下文中是否还有未发出的IO，如果有的话，则调用如下接口进行发送；
         if (txc->ioc.has_pending_aios()) {
-	        txc->state = TransContext::STATE_AIO_WAIT;
+	        txc->state = TransContext::STATE_AIO_WAIT;//将状态设置为AIO_WAIT，本线程直接退出了
 	        txc->had_ios = true;
  	        _txc_aio_submit(txc);
 	        return;
@@ -12694,6 +12695,8 @@ void BlueStore::_kv_sync_thread()
       auto sync_start = mono_clock::now();
       #endif
       // submit synct synchronously (block and wait for it to commit)
+      //bluestore_debug_omit_kv_commit 默认是false
+      //所以这里会执行db的同步提交
       int r = cct->_conf->bluestore_debug_omit_kv_commit ? 0 : db->submit_transaction_sync(synct);
       ceph_assert(r == 0);
 
@@ -13118,7 +13121,7 @@ int BlueStore::queue_transactions(
 
   auto start = mono_clock::now();
 
-  //c应该是store层的gc实例
+  //c应该是store层的gc实例 ---> 不对，这个和gc没有关系
   Collection *c = static_cast<Collection*>(ch.get());
   OpSequencer *osr = c->osr.get();
   dout(10) << __func__ << " ch " << c << " " << c->cid << dendl;
@@ -13126,12 +13129,14 @@ int BlueStore::queue_transactions(
   // prepare
   //创建一个store层的事务,此时这个事务一开始的阶段就是STATE_PREPARE,这个就是在类定义里直接写的
   /// 创建txc并将其在OpSequencer内部排队
+  //txc中记录了所有对onode的改动，所有新生成的blob, 以及记录所有IO操作的context
+  //_txc_add_transaction完成后，事物对于元数据的改变就已经完成，需要记录的IO也已经记录到缓存区等待执行? 不确定是否落盘
   TransContext *txc = _txc_create(static_cast<Collection*>(ch.get()), osr, &on_commit);
 
   //将osd层面的事务，转换为BlueStore层面的事务操作
   for (vector<Transaction>::iterator p = tls.begin(); p != tls.end(); ++p) {
     txc->bytes += (*p).get_num_bytes();
-    _txc_add_transaction(txc, &(*p));
+    _txc_add_transaction(txc, &(*p));//对于传入的每一个事物，merge进入一个transcontext上下文中
   }
   _txc_calc_cost(txc);
 

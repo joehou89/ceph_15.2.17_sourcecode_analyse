@@ -595,7 +595,7 @@ void KernelDevice::_aio_thread()
 	// may free it.
 	if (ioc->priv) {
 	  if (--ioc->num_running == 0) {
-	    aio_callback(aio_callback_priv, ioc->priv);
+	    aio_callback(aio_callback_priv, ioc->priv);//aio_cb() 该线程检查bstore写数据的libaio从内核返回的处理结果，返回则调用cb函数
 	  }
 	} else {
           ioc->try_aio_wake();
